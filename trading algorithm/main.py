@@ -133,7 +133,7 @@ def stock_news_advisor_ai_prompt(news, client):
         print(" ")
 
 def get_gainers():
-    url = "https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/gainers?apiKey=qHykCRiI5wv36E1mBT4xsEG0wp5GXucJ"
+    url = "https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/gainers?apiKey="
     
     list_of_gainers = []
 
