@@ -32,8 +32,10 @@
 import requests
 from datetime import datetime
 import sys
-import trade
 from openai import OpenAI
+import sql_statements as sql
+import sqlite3
+import finnhub
 
 
 def financial_advisor_prompt(insider_transactions, client):
@@ -131,7 +133,7 @@ def stock_news_advisor_ai_prompt(news, client):
         print(" ")
 
 def get_gainers():
-    url = "https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/gainers?apiKey="
+    url = "https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/gainers?apiKey=qHykCRiI5wv36E1mBT4xsEG0wp5GXucJ"
     
     list_of_gainers = []
 
@@ -150,24 +152,43 @@ def get_gainers():
 
     return list_of_gainers
 
-def get_live_stock_prices(stock, API_KEY):
-    # Make the API request
-    url = f"https://api.polygon.io/v2/last/trade/{stock}"
-    params = {
-        "apiKey": API_KEY
-    }
+def get_live_stock_prices(stock, API_KEY, date):
 
-    response = requests.get(url, params=params)
+    # Make the API request
+    url = f"https://api.polygon.io/v2/last/trade/{stock}?apiKey={API_KEY}"
+
+
+    response = requests.get(url)
+    return_list = []
 
     # Check if the request was successful
     if response.status_code == 200:
         data = response.json()
         last_trade_price = data["results"]["p"]  # Last trade price
-        last_trade_size = data["results"]["s"]  # Last trade size
-        print(f"Last trade for {stock}: Price = ${last_trade_price}, Size = {last_trade_size}")
+        return_list.append({
+            "ticker": stock,
+            "date": date,
+            "price": last_trade_price
+        })
     else:
         print(f"Error: {response.status_code} - {response.text}")
 
+def fetch_insider_trasnactions(ticker, from_date, to_date):
+
+    finnhub_client = finnhub.Client(api_key="")  # Replace with your Finnhub API key
+
+    # Fetch insider transactions from the API
+    response = finnhub_client.stock_insider_transactions(ticker, from_date, to_date)
+
+    return response.get('data', [])
+
+def fetch_news(ticker, from_date, to_date):
+
+    finnhub_client = finnhub.Client(api_key="")  # Replace with your Finnhub API key
+
+    news_data = finnhub_client.company_news(ticker, _from=from_date, to=to_date)
+
+    return news_data
 
 # After you get the gainers you want to start getting the price and start getting the news and running through a ai language model to see 
 # how impactful the news is.
@@ -176,6 +197,7 @@ def get_live_stock_prices(stock, API_KEY):
 
 def main():
 
+    sql.create_database()
     today_date = datetime.today().date() # Current Date ( needed to get the stock price, news, and transactions)
 
     # store stock gainers
@@ -187,18 +209,38 @@ def main():
         for stock in gainer_data:
             print(f"Fetching data for {stock}...")
             POLYGON_API_KEY = ""
-            get_live_stock_prices(stock, POLYGON_API_KEY)
+
+            stock = get_live_stock_prices(stock, POLYGON_API_KEY)
+
+            conn = sqlite3.connect("financial_data.db")
+            cursor = conn.cursor()
+            sql.insert_stock(cursor, stock)
             
 
             client = OpenAI(api_key="<DeepSeek API Key>", base_url="https://api.deepseek.com")
 
             # Feed deepseek the news info
-            stock_news = trade.fetch_news(stock, today_date, today_date)
-            stock_news_advisor_ai_prompt(stock_news, client)
+            # going to need an algorithm so you dont repeat the news inside of the database
+            # also will need another algorithm to display the news in the program from the database
+            stock_news = fetch_news(stock, today_date, today_date)
+            stock_news.append(stock_news_advisor_ai_prompt(stock_news, client))
+            sql.insert_news(cursor, stock, stock_news)
 
             # Feed deepseek the insider transactions info
-            insider_transactions = trade.fetch_insider_trasnactions(stock, today_date, today_date)
-            financial_advisor_prompt(insider_transactions, client)
+            # going to need an algorithm so you dont repeat the tranasactions inside of the database
+            # also will need another algorithm to display the transactions in the program from the database
+            insider_transactions = fetch_insider_trasnactions(stock, today_date, today_date)
+            insider_transactions.append(financial_advisor_prompt(insider_transactions, client))
+            sql.insert_transactions(cursor, stock, insider_transactions)
+            
 
+
+
+            # and then run the calculations to see how many times there are chances to get a 10 - 30% gain
+            # use todays date to run calculations on all of the stocks that you have gotten the data for
+
+
+
+           
 if __name__ == "__main__":
     main()  

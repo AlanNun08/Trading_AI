@@ -1,17 +1,9 @@
 use api to find stocks that have been the most gainers every day for the last week
-then find the reason why that they gained
-once I find that reason then i use that reason for 100 stocks and look for that reason in different stocks in different markets
-	- for example, if a pharmaceutical company gained %100 I want to know why
-	then I want to know if the reason for the pharma company gaining is the same reason
-	why other pharma company also gain. 
-	Except I want to look for as many reason as I can for why 1,000 pharmaceutical gain and see if there is
-	any matching reasons between all of them
-	Then I need to do this for the other markets like technology, or medical, real estate, etc
 	
 This is my first strategy
 use the stock market api to look for stocks that gain a lot within a day or 3 
 then find out that reason
-	- is it because of the market doing good
+	- is it doing good because of the market doing good
 	- is someone inflating those prices
 	- did they sign a new contract
 	- who did they sign a new contract with
@@ -19,15 +11,15 @@ then find out that reason
 do this across different industries
 Make sure to record the reason inside of a database
 	things to record
-	how much time from the time the day starts til the time the stock starts going up
- 	news- what is the reason
-	name of stock
-	name of industry
-	time and date
-	how much is it trading ( how many people are buying and selling ) the whole time it is suppose to go up
-	prices - the price it is at before and after the gain
-	who is buying
-	what orders are entering and leaving the market
+		how much time from the time the day starts til the time the stock starts going up
+		news- what is the reason
+		name of stock
+		name of industry
+		time and date
+		how much is it trading ( how many people are buying and selling ) the whole time it is suppose to go up
+		prices - the price it is at before and after the gain
+		who is buying
+		what orders are entering and leaving the market
 
 	
 	I think the reason why the Sidus space stock didn't gain the way I want it to is because I was looking for the 	wrong reason
@@ -62,9 +54,3 @@ To Do List:
         maybe create a list of keywords
 
 Once I have my strategy I can use it to predict what the insider trades will happen by using the finhub api for that specific date or day
-
-
-FIX THE DATES INSERTED INSIDE OF THE DATABASE, MAKE SURE THEY ARE ACCURATE
-
-	
-        
