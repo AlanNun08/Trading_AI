@@ -36,6 +36,7 @@ from openai import OpenAI
 import sql_statements as sql
 import sqlite3
 import finnhub
+import calculate_percentage_in_timefram as calculate
 
 
 def financial_advisor_prompt(insider_transactions, client):
@@ -215,6 +216,7 @@ def main():
             conn = sqlite3.connect("financial_data.db")
             cursor = conn.cursor()
             sql.insert_stock(cursor, stock)
+            calculate.calculate_gains(stock, today_date)
             
 
             client = OpenAI(api_key="<DeepSeek API Key>", base_url="https://api.deepseek.com")
@@ -234,6 +236,10 @@ def main():
             sql.insert_transactions(cursor, stock, insider_transactions)
             
 
+
+
+            conn.commit()
+            conn.close()
 
 
             # and then run the calculations to see how many times there are chances to get a 10 - 30% gain
