@@ -2,7 +2,8 @@ import sqlite3
 from datetime import datetime, timedelta
 import sys
 
-
+# I want the point of this algorithm to calculate what times out of the day there is possibilties for 10-30% gains 
+# So I can furth be able to make better predictions on what to enter and get out to get the gains
 
 def convert_to_pst(row):
     # Define the format of the time string
