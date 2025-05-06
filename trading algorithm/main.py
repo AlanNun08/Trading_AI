@@ -10,13 +10,7 @@
     # using the info that you got from calculate_percentage_in_timeframe to predict what the probabilty is to get a 10 - 30% gain
 
         # when you check ( accurately ) how many times there are chances to get a 10 - 30% gain make sure to also time it 
-        # so how long did it take to get these gains and also at what time did this happen to try to find a pattern overall to get a accurate prediction
-
-    # also make sure you are running the part of the program that searches for news
-
-        # make sure to have a way to match the news that is coming out to previous news of other stocks to see if there is a match 
-        # for possible positive or negative effects on the stock
-
+        
 
 # get the gainers
 
@@ -51,12 +45,20 @@ def stock_news_advisor_ai_prompt(news, client):
 
         # Define the system and user prompts
         system_prompt = """
-        You are a knowledgeable and experienced financial advisor. Your task is to analyze news articles and provide clear, actionable insights to help users make informed financial decisions. When given a news headline, source, and summary, follow these steps:
+        You are a **Financial News Analysis Assistant** for a financial advisor. Your goal is to analyze each provided news article and deliver insights in a clear, accessible manner. For **every article**, make sure to include the following in your response:
 
-        1. **Contextualize the News**: Briefly explain the significance of the news and how it relates to the financial markets, industries, or the economy.
-        2. **Assess the Impact**: Analyze the potential short-term and long-term implications for investors, businesses, or the general public.
-        3. **Provide Recommendations**: Offer practical advice or strategies for individuals or businesses to consider based on the news.
-        4. **Use Simple Language**: Ensure your explanation is easy to understand, even for those without a financial background.
+        1. **Context** – Provide relevant background or context for the news. Explain why this story is significant (e.g. related industry trends, recent events, or historical background that helps put the news in perspective).
+
+        2. **Short-Term Impact** – Analyze the immediate or short-term implications of the news. Discuss how markets, specific stocks or sectors, or investor sentiment might be affected in the coming days or weeks.
+
+        3. **Long-Term Impact** – Discuss the potential long-range consequences. Consider effects on the company’s fundamentals, the industry as a whole, or economic/market trends over the next several months or years.
+
+        4. **Recommendation** – Offer a practical recommendation or actionable advice for the financial advisor and their clients. This might include investment strategy adjustments, risk management tips, or talking points for client communication, based on the news.
+
+        **Language and Tone:** Use simple, clear language that a non-expert can understand. Avoid financial jargon (or explain it briefly if you must use it). Keep a professional but **friendly tone**, as if translating complex news for a client. 
+
+        **Format:** Organize your answer into distinct sections (you can use headings or bullet points for each of the above parts). This structure will make it easy to scan and understand. Keep paragraphs short and to the point. 
+
         """
 
         user_prompt = f"""
@@ -65,7 +67,7 @@ def stock_news_advisor_ai_prompt(news, client):
         - **Source**: {news['source']}
         - **Summary**: {news['summary']}
 
-        Please provide your insights and recommendations as a financial advisor.
+        Given this news, please provide an analysis covering the context, short-term impact, long-term impact, and a recommendation.
         """
 
         # Call the API
@@ -180,7 +182,6 @@ def main():
             stock_news.append(stock_news_advisor_ai_prompt(stock_news, client))
             sql.insert_news(cursor, stock, stock_news)
 
-            # Feed deepseek the insider transactions info
             # going to need an algorithm so you dont repeat the tranasactions inside of the database
             # also will need another algorithm to display the transactions in the program from the database
             insider_transactions = fetch_insider_trasnactions(stock, today_date, today_date)
