@@ -20,6 +20,19 @@ def convert_to_pst(row):
 
     # Return the converted time in PST
     return time_only
+def entry(ticker, old_time, new_time, old_ten_percent_value, ten_percent_value, price_change_percentage):
+    # Create a dictionary with the data
+    entry = {
+        "Ticker": ticker,
+        "Old time": old_time,
+        "Old Price": f"Old Price: ${old_ten_percent_value[3]:.2f}",
+        "New time": new_time,
+        "New price": f"New price: ${ten_percent_value[3]:.2f}",
+        "Percentage change": f"Percentage change: {price_change_percentage:.2f}%"
+    }
+
+    # Append the dictionary to the list
+    return (entry)
 
 def calculate_gains(ticker, date):
 
@@ -83,26 +96,9 @@ def calculate_gains(ticker, date):
                     old_time = convert_to_pst(old_ten_percent_value)
                     new_time = convert_to_pst(ten_percent_value)
                     price_change_percentage = ((ten_percent_value[3] - old_ten_percent_value[3]) / old_ten_percent_value[3]) * 100
-                    print(f"Ticker: {ticker}")
-                    print(f"Old time: {old_time}")
-                    print(f"Old Price: ${old_ten_percent_value[3]:.2f}")
-                    print(f"New time: {new_time}")
-                    print(f"New price: ${ten_percent_value[3]:.2f}")
-                    print(f"Percentage change: {price_change_percentage:.2f}%")
-                    print(" ")
-                    
-                    # Create a dictionary with the data
-                    entry = {
-                        "Ticker": ticker,
-                        "Old time": old_time,
-                        "Old Price": round(old_ten_percent_value[3], 2),
-                        "New time": new_time,
-                        "New price": ten_percent_value[3],
-                        "Percentage change": round(price_change_percentage, 2)
-                    }
 
                     # Append the dictionary to the list
-                    ten_percentage_info.append(entry)
+                    ten_percentage_info.append(entry(ticker, old_time, new_time, old_ten_percent_value, ten_percent_value, price_change_percentage))
 
                     ten_percent_value = row
                     old_ten_percent_value = row
@@ -115,13 +111,8 @@ def calculate_gains(ticker, date):
                     old_time = convert_to_pst(old_twenty_percent_value)
                     new_time = convert_to_pst(twenty_percent_value)
                     price_change_percentage = ((twenty_percent_value[3] - old_twenty_percent_value[3]) / old_twenty_percent_value[3]) * 100
-                    print(f"Ticker: {ticker}")
-                    print(f"Old Time: {old_time}")
-                    print(f"Old Price: ${old_twenty_percent_value[3]:.2f}")
-                    print(f"New Time: {new_time}")
-                    print(f"New price: ${twenty_percent_value[3]:.2f}")
-                    print(f"Percentage change: {price_change_percentage:.2f}%")
-                    print(" ")
+                    
+                    twenty_percentage_info.append(entry(ticker, old_time, new_time, old_twenty_percent_value, twenty_percent_value, price_change_percentage))
                     twenty_percent_value = row
                     old_twenty_percent_value = row
 
@@ -134,13 +125,8 @@ def calculate_gains(ticker, date):
                     old_time = convert_to_pst(old_thirty_percent_value)
                     new_time = convert_to_pst(thirty_percent_value)
                     price_change_percentage = ((thirty_percent_value[3] - old_thirty_percent_value[3]) / old_thirty_percent_value[3]) * 100
-                    print(f"Ticker: {ticker}")
-                    print(f"Old Time: {old_time}")
-                    print(f"Old Price: ${old_thirty_percent_value[3]:.2f}")
-                    print(f"New Time: {new_time}")
-                    print(f"New price: ${thirty_percent_value[3]:.2f}")
-                    print(f"Percentage change: {price_change_percentage:.2f}%")
-                    print(" ")
+                  
+                    thirty_percentage_info.append(entry(ticker, old_time, new_time, old_thirty_percent_value, thirty_percent_value, price_change_percentage))
                     thirty_percent_value = row
                     old_thirty_percent_value = row
                     

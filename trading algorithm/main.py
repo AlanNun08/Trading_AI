@@ -1,12 +1,14 @@
 # info to get before creating the main part of this program 
 
     # check on other stocks if someone buys a lot of stock like 150,000 shares and then someone sells that much volume then its time to pullout
+    # Haven't done this
 
-    # also make sure you are running the part of the program that searches for news
+    # also make sure you are running the part of the program that searches for new
+    # I did this
 
         # make sure to investigate what type of news can be good or bad so you can have a list of good and bad news so you can match it with the current news 
         # are coming out in the moring of the time you are running the program
-
+        # I did this by use AI
 #main
 
     # get the gainers around 2 am 
@@ -31,7 +33,6 @@
 
 import requests
 from datetime import datetime
-import sys
 from openai import OpenAI
 import sql_statements as sql
 import sqlite3
