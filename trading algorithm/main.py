@@ -3,12 +3,6 @@
     # check on other stocks if someone buys a lot of stock like 150,000 shares and then someone sells that much volume then its time to pullout
     # Haven't done this
 
-    # also make sure you are running the part of the program that searches for new
-    # I did this
-
-        # make sure to investigate what type of news can be good or bad so you can have a list of good and bad news so you can match it with the current news 
-        # are coming out in the moring of the time you are running the program
-        # I did this by use AI
 #main
 
     # get the gainers around 2 am 
@@ -40,49 +34,6 @@ import finnhub
 import calculate_percentage_in_timefram as calculate
 
 
-def financial_advisor_prompt(insider_transactions, client):
-
-    # Process insider transactions
-    for transaction in insider_transactions:
-        name = transaction['name']
-        share = transaction['share']
-        change = transaction['change']
-        transaction_date = transaction['transactionDate']
-        price = transaction['transactionPrice']
-
-        user_prompt =  f"""
-        Financial Transaction Details:
-        - Name: {name}
-        - Share: {share}
-        - Change: {change}
-        - Transaction Date: {transaction_date}
-        - Price: {price}
-        """
-
-
-        system_prompt = """
-        You are a highly experienced financial advisor with deep expertise in analyzing stock transactions and providing actionable insights. Your task is to evaluate financial transactions based on the details provided by the user. 
-
-        When analyzing the transaction, consider the following factors:
-        1. **Market Trends**: Assess the current market conditions and how they might impact the stock.
-        2. **Transaction Details**: Analyze the significance of the change in share value, the timing of the transaction, and the price at which the transaction occurred.
-        3. **Client Goals**: Tailor your advice to help the client make informed decisions aligned with their financial goals.
-
-        Provide a clear, concise, and professional analysis. Include recommendations on whether the client should buy, sell, or hold the shares, and explain your reasoning. If additional information is needed to make a more informed decision, specify what is required.
-        """
-
-        # Call the API
-        response = client.chat.completions.create(
-            model="deepseek-chat",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            stream=False
-        )
-    
-        print("\nFinancial Advisor's Insider Transactions Insights:")
-        print(response.choices[0].message.content)
 
 def stock_news_advisor_ai_prompt(news, client):
 
@@ -233,7 +184,6 @@ def main():
             # going to need an algorithm so you dont repeat the tranasactions inside of the database
             # also will need another algorithm to display the transactions in the program from the database
             insider_transactions = fetch_insider_trasnactions(stock, today_date, today_date)
-            insider_transactions.append(financial_advisor_prompt(insider_transactions, client))
             sql.insert_transactions(cursor, stock, insider_transactions)
             
 
