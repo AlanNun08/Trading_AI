@@ -22,7 +22,6 @@
 import requests
 from datetime import datetime
 from openai import OpenAI
-import sql_statements as sql
 import sqlite3
 import finnhub
 import calculate_percentage_in_timefram as calculate
@@ -152,7 +151,7 @@ def fetch_news(ticker, from_date, to_date):
 
 def main():
 
-    sql.create_database()
+    
     today_date = datetime.today().date() # Current Date ( needed to get the stock price, news, and transactions)
 
     # store stock gainers
@@ -169,7 +168,7 @@ def main():
 
             conn = sqlite3.connect("financial_data.db")
             cursor = conn.cursor()
-            sql.insert_stock(cursor, stock)
+           
             calculate.calculate_gains(stock, today_date)
             
 
@@ -180,15 +179,12 @@ def main():
             # also will need another algorithm to display the news in the program from the database
             stock_news = fetch_news(stock, today_date, today_date)
             stock_news.append(stock_news_advisor_ai_prompt(stock_news, client))
-            sql.insert_news(cursor, stock, stock_news)
+            
 
             # going to need an algorithm so you dont repeat the tranasactions inside of the database
             # also will need another algorithm to display the transactions in the program from the database
             insider_transactions = fetch_insider_trasnactions(stock, today_date, today_date)
-            sql.insert_transactions(cursor, stock, insider_transactions)
             
-
-
 
             conn.commit()
             conn.close()
@@ -196,7 +192,6 @@ def main():
 
             # and then run the calculations to see how many times there are chances to get a 10 - 30% gain
             # use todays date to run calculations on all of the stocks that you have gotten the data for
-
 
 
            
