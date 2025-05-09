@@ -1,19 +1,24 @@
 <template>
     <div>
-      <h2>Stock Info for {{ ticker }}</h2>
-      <pre>{{ stockData }}</pre>
+      <h2>Top Gainers – Daily Prices</h2>
+      <ul>
+        <li v-for="stock in stocks" :key="stock.ticker">
+          {{ stock.ticker }} | Open: {{ stock.open }} | Close: {{ stock.close }}
+        </li>
+      </ul>
     </div>
   </template>
   
   <script setup>
   import { ref, onMounted } from 'vue';
-  import { getStockData } from '../services/stockService.js';
+  import { getGainersWithPrices } from '../services/stockService.js';
   
-  const ticker = 'AAPL';
-  const stockData = ref(null);
+  const stocks = ref([]);
   
   onMounted(async () => {
-    stockData.value = await getStockData(ticker);
+    stocks.value = await getGainersWithPrices();
   });
   </script>
+  
+  
   
