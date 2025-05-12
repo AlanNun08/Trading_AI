@@ -1,61 +1,60 @@
-import { restClient } from '@polygon.io/client-js';
+// src/services/stockService.js
 
-const rest = restClient("qHykCRiI5wv36E1mBT4xsEG0wp5GXucJ");
+const API_KEY = import.meta.env.VITE_ALPACA_API_KEY;
+const API_SECRET = import.meta.env.VITE_ALPACA_SECRET_KEY;
 
-function getYesterdayDate() {
-  const today = new Date();
-  today.setDate(today.getDate() - 1);
-  return today.toISOString().split('T')[0];
-}
+const options = {
+  method: 'GET',
+  headers: {
+    accept: 'application/json',
+    'APCA-API-KEY-ID': API_KEY,
+    'APCA-API-SECRET-KEY': API_SECRET
+  }
+};
 
-export async function getTopGainers() {
+// Get the current list of top 10 gainers
+export async function getGainersWithPrices() {
   try {
-    const response = await rest.stocks.snapshotGainersLosers("gainers", {});
-    console.log("📈 Gainers response:", response);
-    if (!response.tickers || response.tickers.length === 0) {
-      console.warn("⚠️ No tickers returned!");
-      return [];
-    }
-    const tickers = response.tickers.map(stock => stock.ticker);
-    console.log("✅ Extracted tickers:", tickers);
-    return tickers;
-  } catch (error) {
-    console.error("❌ Error fetching gainers:", error);
+    const res = await fetch(
+      'https://data.alpaca.markets/v1beta1/screener/stocks/movers?top=10',
+      options
+    );
+    const data = await res.json();
+
+    if (!data.gainers || data.gainers.length === 0) return [];
+
+    return data.gainers.map(stock => ({
+      ticker: stock.symbol,
+      price: stock.price,
+      change: stock.change,
+      percent_change: stock.percent_change
+    }));
+  } catch (err) {
+    console.error("❌ Error fetching gainers:", err);
     return [];
   }
 }
 
-export async function getStockData(ticker, date) {
-  try {
-    console.log(`📊 Fetching dailyOpenClose for ${ticker} on ${date}`);
-    const response = await rest.stocks.dailyOpenClose(ticker, date);
-    return response;
-  } catch (err) {
-    console.error(`❌ Error fetching data for ${ticker}:`, err);
-    return null;
-  }
-}
+// Poll gainers every X milliseconds and detect changes
+export async function monitorGainers(intervalMs = 6000, onChange = null) {
+  let previousTickers = [];
 
-export async function getGainersWithPrices() {
-  const date = getYesterdayDate(); // Use yesterday for reliable data
-  const tickers = await getTopGainers();
-  console.log("🔁 Starting to fetch stock data...");
+  while (true) {
+    const gainers = await getGainersWithPrices();
+    const currentTickers = gainers.map(g => g.ticker);
 
-  const results = [];
+    if (JSON.stringify(currentTickers) !== JSON.stringify(previousTickers)) {
+      console.log("🔄 Gainers changed!");
+      console.log("Previous:", previousTickers);
+      console.log("Current :", currentTickers);
+      previousTickers = currentTickers;
 
-  for (const ticker of tickers) {
-    const data = await getStockData(ticker, date);
-    if (data) {
-      results.push({
-        ticker,
-        open: data.open,
-        close: data.close,
-        from: data.from,
-        to: data.to
-      });
+      // Optional: call external function if provided
+      if (onChange) onChange(gainers);
+    } else {
+      console.log("✅ No change at", new Date().toLocaleTimeString());
     }
-  }
 
-  console.log("✅ Final stock results:", results);
-  return results;
+    await new Promise(resolve => setTimeout(resolve, intervalMs));
+  }
 }
