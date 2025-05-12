@@ -1,19 +1,52 @@
-Trading_AI
+# 📈 Stock Gainer Dashboard
 
-Trading_AI is an innovative project that leverages OpenAI to analyze and summarize daily stock news and insider transactions, enhancing user understanding and engagement by 30%. The system is designed to provide real-time insights into the stock market, with a focus on improving user decision-making through comprehensive, AI-driven content.
+## Overview
 
-Key Features:
+This project is a **Vue 3 stock monitoring dashboard** that lets users:
 
-Stock News & Insider Transaction Summaries: Utilizes OpenAI to process and summarize daily news articles and insider transactions.
-Real-time Data Processing: Integrates custom APIs to deliver up-to-date stock data, ensuring users receive timely information.
-Alerts & Notifications: Customizable alerts for stock-related events and insider transactions to keep users informed.
-Enhanced User Engagement: Achieved a 30% improvement in user interaction by providing valuable insights into stock movements and trends.
-Technologies Used:
+- ✅ View the **top gaining stocks** of the day
+- ✅ Click a gainer to view its **live news feed**
+- ✅ Display a **price chart** for the selected stock
+- ✅ View everything on a single, clean dashboard with a responsive layout
 
-JavaScript (Backend)
-React (Frontend)
-OpenAI API (AI-driven text analysis)
-Custom APIs for real-time data processing
-Performance Improvements:
+The dashboard is powered by live data from **Alpaca** and **Finnhub APIs**, with a frontend built in **Vue 3** and backend integration planned via **Java** for storing and processing stock data.
 
-Engineered a scalable backend system, improving system performance by 40% through optimizations in data processing and API integration.
+---
+
+## 🔧 Features Implemented So Far
+
+- **Top Gainers List**  
+  Displays the top gainers of the day using Alpaca's API. Stocks are clickable to load additional data.
+
+- **Stock News Viewer**  
+  Fetches and displays today's news headlines for the selected stock using Finnhub’s `company-news` endpoint.
+
+- **Live Price Chart**  
+  Renders a daily stock price chart using Chart.js and Finnhub’s candle endpoint.
+
+- **Dynamic Dashboard**  
+  All components are modular (gainers, news, chart) and wired together in `DashboardView.vue`. Selecting a stock updates both news and price chart.
+
+- **Router Setup with Navbar**  
+  Includes a top navigation bar with links to Home and Stocks, styled with responsive CSS.
+
+---
+
+## 📦 Tech Stack
+
+- **Frontend:** Vue 3 + Vite
+- **Charts:** Chart.js (via vue-chartjs)
+- **Styling:** Scoped CSS + Flexbox (fully responsive)
+- **APIs:**
+  - [Alpaca Market Movers](https://alpaca.markets/docs/)
+  - [Finnhub Company News + Stock Candle](https://finnhub.io/docs/api)
+- **Backend:** (Planned) Java Spring Boot (for data persistence and extended analysis)
+
+---
+
+## 🚧 Next Steps
+
+- 🔄 Hook into the Java backend to store selected tickers, news, and prices
+- 📊 Add support for intraday chart resolution switching
+- 🔔 Optional: Add notifications or watchlist support
+- 🧪 Add unit tests and loading spinners

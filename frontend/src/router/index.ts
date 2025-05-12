@@ -12,8 +12,8 @@ const router = createRouter({
     },
 
     {
-      path:'/stocks',
-      name:'Stocks',
+      path:'/dashboard',
+      name:'Dashboard',
       component: DashboardView,
     },
   ],

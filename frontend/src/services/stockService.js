@@ -117,3 +117,61 @@ export async function getDailyPrices(ticker) {
     return [];
   }
 }
+
+export async function generateNewsInsights(newsArray) {
+  const apiKey = import.meta.env.VITE_OPENAI_KEY; // Or VITE_DEEPSEEK_KEY
+  const endpoint = 'https://api.openai.com/v1/chat/completions'; // or DeepSeek URL
+  const model = 'gpt-3.5-turbo'; // or 'deepseek-chat'
+
+  const systemPrompt = `
+You are a Financial News Analysis Assistant for a financial advisor. For every article, provide:
+
+1. **Context**
+2. **Short-Term Impact**
+3. **Long-Term Impact**
+4. **Recommendation**
+
+Use clear, friendly language with headings or bullet points.
+`;
+
+  const results = [];
+
+  for (const article of newsArray) {
+    const userPrompt = `
+Here is the news article for analysis:
+- **Headline**: ${article.headline}
+- **Source**: ${article.source}
+- **Summary**: ${article.summary}
+
+Please provide context, short- and long-term impact, and a recommendation.
+`;
+
+    const body = {
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ]
+    };
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(body)
+      });
+
+      const json = await res.json();
+      const insight = json.choices?.[0]?.message?.content || 'No response';
+      results.push({ headline: article.headline, insight });
+    } catch (err) {
+      console.error('❌ Error generating insight:', err);
+      results.push({ headline: article.headline, insight: 'Error generating insight' });
+    }
+  }
+
+  return results;
+}
