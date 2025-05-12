@@ -58,3 +58,62 @@ export async function monitorGainers(intervalMs = 6000, onChange = null) {
     await new Promise(resolve => setTimeout(resolve, intervalMs));
   }
 }
+
+function getEasternDateString() {
+  const now = new Date();
+  const estDate = now.toLocaleDateString('en-US', {
+    timeZone: 'America/New_York',
+  });
+  const [month, day, year] = estDate.split('/');
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+}
+
+export async function getStockNews(ticker) {
+  const apiKey = import.meta.env.VITE_FINNHUB_API_KEY;
+  const today = getEasternDateString();
+
+  const url = `https://finnhub.io/api/v1/company-news?symbol=${ticker}&from=${today}&to=${today}&token=${apiKey}`;
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+
+    return data.map(article => ({
+      headline: article.headline,
+      summary: article.summary,
+      source: article.source,
+      datetime: article.datetime,
+    }));
+  } catch (err) {
+    console.error(`❌ Error fetching news for ${ticker}:`, err);
+    return [];
+  }
+}
+
+export async function getDailyPrices(ticker) {
+  const apiKey = import.meta.env.VITE_FINNHUB_API_KEY;
+
+  // Get past 5 days of data
+  const end = Math.floor(Date.now() / 1000); // now in UNIX time
+  const start = end - 5 * 24 * 60 * 60;       // 5 days ago
+
+  const url = `https://finnhub.io/api/v1/stock/candle?symbol=${ticker}&resolution=D&from=${start}&to=${end}&token=${apiKey}`;
+
+  try {
+    const res = await fetch(url);
+    const json = await res.json();
+
+    if (json.s !== 'ok') {
+      console.warn("No chart data returned.");
+      return [];
+    }
+
+    return json.t.map((timestamp, i) => ({
+      date: new Date(timestamp * 1000).toISOString().split('T')[0],
+      close: json.c[i]
+    }));
+  } catch (err) {
+    console.error("❌ Error fetching chart data:", err);
+    return [];
+  }
+}

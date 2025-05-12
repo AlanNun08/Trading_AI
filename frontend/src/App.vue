@@ -3,81 +3,71 @@ import { RouterLink, RouterView } from 'vue-router'
 </script>
 
 <template>
-  <header>
+  <header class="navbar">
+    <div class="navbar-container">
+      <div class="logo">📈 Stock Viewer</div>
 
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/stocks">Stocks</RouterLink>
+      <nav class="nav-links">
+        <RouterLink to="/" exact-active-class="active">Home</RouterLink>
+        <RouterLink to="/stocks" exact-active-class="active">Stocks</RouterLink>
       </nav>
     </div>
   </header>
 
-  <RouterView />
+  <main class="main-content">
+    <RouterView />
+  </main>
 </template>
 
 <style scoped>
-header {
-  line-height: 1.5;
-  max-height: 100vh;
+/* Basic layout */
+.navbar {
+  background-color: #1a1a1a;
+  padding: 1rem 2rem;
+  color: white;
+  display: flex;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.navbar-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 1200px;
 }
 
 .logo {
-  display: block;
-  margin: 0 auto 2rem;
+  font-size: 1.2rem;
+  font-weight: bold;
 }
 
-nav {
-  width: 100%;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 2rem;
+.nav-links {
+  display: flex;
+  gap: 1rem;
 }
 
-nav a.router-link-exact-active {
-  color: var(--color-text);
+.nav-links a {
+  color: #ccc;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  transition: background-color 0.2s, color 0.2s;
 }
 
-nav a.router-link-exact-active:hover {
-  background-color: transparent;
+.nav-links a:hover {
+  background-color: #333;
+  color: white;
 }
 
-nav a {
-  display: inline-block;
-  padding: 0 1rem;
-  border-left: 1px solid var(--color-border);
+.nav-links .active {
+  background-color: #007bff;
+  color: white;
 }
 
-nav a:first-of-type {
-  border: 0;
-}
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  nav {
-    text-align: left;
-    margin-left: -1rem;
-    font-size: 1rem;
-
-    padding: 1rem 0;
-    margin-top: 1rem;
-  }
+/* Optional: page spacing below header */
+.main-content {
+  padding: 2rem;
 }
 </style>
