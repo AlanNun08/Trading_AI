@@ -1,52 +1,100 @@
-# 📈 Stock Gainer Dashboard
+## 📊 Trading AI – Full Stack App
 
-## Overview
+This project is a full-stack trading intelligence dashboard that:
 
-This project is a **Vue 3 stock monitoring dashboard** that lets users:
-
-- ✅ View the **top gaining stocks** of the day
-- ✅ Click a gainer to view its **live news feed**
-- ✅ Display a **price chart** for the selected stock
-- ✅ View everything on a single, clean dashboard with a responsive layout
-
-The dashboard is powered by live data from **Alpaca** and **Finnhub APIs**, with a frontend built in **Vue 3** and backend integration planned via **Java** for storing and processing stock data.
+* Displays **top stock gainers** with daily price data
+* Shows **real-time financial news** for each stock
+* Generates **AI-powered news insights**
+* Sends all relevant data automatically to a **Java Spring Boot backend** for storage
 
 ---
 
-## 🔧 Features Implemented So Far
+## ⚙️ Technologies Used
 
-- **Top Gainers List**  
-  Displays the top gainers of the day using Alpaca's API. Stocks are clickable to load additional data.
+### 🔵 Frontend
 
-- **Stock News Viewer**  
-  Fetches and displays today's news headlines for the selected stock using Finnhub’s `company-news` endpoint.
+* **Vue 3 + Vite**
+* `fetch()` for API communication
+* Chart.js (optional for price graphs)
+* Components:
 
-- **Live Price Chart**  
-  Renders a daily stock price chart using Chart.js and Finnhub’s candle endpoint.
+  * `Stocking.vue` – shows daily top gainers and sends them to backend
+  * `Stockiness.vue` – shows news for a selected stock, generates insights, and sends to backend
 
-- **Dynamic Dashboard**  
-  All components are modular (gainers, news, chart) and wired together in `DashboardView.vue`. Selecting a stock updates both news and price chart.
+### ☕ Backend
 
-- **Router Setup with Navbar**  
-  Includes a top navigation bar with links to Home and Stocks, styled with responsive CSS.
-
----
-
-## 📦 Tech Stack
-
-- **Frontend:** Vue 3 + Vite
-- **Charts:** Chart.js (via vue-chartjs)
-- **Styling:** Scoped CSS + Flexbox (fully responsive)
-- **APIs:**
-  - [Alpaca Market Movers](https://alpaca.markets/docs/)
-  - [Finnhub Company News + Stock Candle](https://finnhub.io/docs/api)
-- **Backend:** (Planned) Java Spring Boot (for data persistence and extended analysis)
+* **Java 17**, **Spring Boot 2.7**
+* REST API endpoints with `@RestController`
+* JDBC with `JdbcTemplate`
+* SQLite or H2 for local SQL storage
+* DAO pattern for `Stock` and `News`
 
 ---
 
-## 🚧 Next Steps
+## 🔗 Frontend–Backend Integration
 
-- 🔄 Hook into the Java backend to store selected tickers, news, and prices
-- 📊 Add support for intraday chart resolution switching
-- 🔔 Optional: Add notifications or watchlist support
-- 🧪 Add unit tests and loading spinners
+### ✅ Stocking.vue
+
+* Fetches daily top gainers via Polygon or Alpaca API
+* Automatically sends each stock's `ticker`, `date`, and `price` to:
+
+  ```
+  POST http://localhost:8080/api/data/save
+  ```
+
+### ✅ Stockiness.vue
+
+* Fetches latest news for a specific stock
+* Automatically sends each news item (`headline`, `source`, `summary`) to the backend
+
+---
+
+## 📁 Backend Project Structure
+
+```
+src/main/java/
+│
+├── controller/
+│   └── DataController.java     // Handles POST from frontend
+│
+├── service/
+│   ├── StockService.java
+│   ├── StockServiceImpl.java
+│   ├── NewsService.java
+│   └── NewsServiceImpl.java
+│
+├── dao/
+│   ├── StockDao.java
+│   ├── JdbcStockDao.java
+│   ├── NewsDao.java
+│   └── JdbcNewsDao.java
+│
+├── model/
+│   ├── Stock.java
+│   └── News.java
+│
+├── dto/
+│   └── SaveRequest.java        // Accepts combined stock + news data
+│
+└── Application.java            // Spring Boot entry point
+```
+
+---
+
+## 🚀 To Run
+
+### 👥 Backend
+
+```bash
+cd backend/
+mvn clean install
+mvn spring-boot:run
+```
+
+### 🌐 Frontend
+
+```bash
+cd frontend/
+npm install
+npm run dev
+```
