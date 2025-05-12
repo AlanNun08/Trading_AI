@@ -33,7 +33,7 @@ This project is a full-stack trading intelligence dashboard that:
 
 ## 🔗 Frontend–Backend Integration
 
-### ✅ Stocking.vue
+### ✅ StockInfo.vue
 
 * Fetches daily top gainers via Polygon or Alpaca API
 * Automatically sends each stock's `ticker`, `date`, and `price` to:
@@ -42,7 +42,7 @@ This project is a full-stack trading intelligence dashboard that:
   POST http://localhost:8080/api/data/save
   ```
 
-### ✅ Stockiness.vue
+### ✅ StockNews.vue
 
 * Fetches latest news for a specific stock
 * Automatically sends each news item (`headline`, `source`, `summary`) to the backend
