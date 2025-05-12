@@ -47,10 +47,51 @@ async function fetchNews() {
   try {
     news.value = await getStockNews(props.ticker);
     insights.value = [];
+
+    // ✅ Auto-send news to backend after fetch
+    await sendNewsToBackend(news.value, props.ticker);
   } catch (err) {
     error.value = 'Failed to fetch news.';
   } finally {
     loading.value = false;
+  }
+}
+
+async function sendNewsToBackend(newsList, ticker) {
+  const date = new Date().toISOString().split('T')[0];
+
+  for (const article of newsList) {
+    const payload = {
+      stock: {
+        ticker: ticker,
+        date: date,
+        price: "0.0" // optional placeholder if price not relevant
+      },
+      news: [
+        {
+          ticker: ticker,
+          date: date,
+          headline: article.headline,
+          source: article.source,
+          aiSummary: article.summary
+        }
+      ]
+    };
+
+    try {
+      const response = await fetch('http://localhost:8080/api/data/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.text();
+      console.log(`✅ Sent news: ${article.headline}`, result);
+    } catch (err) {
+      console.error(`❌ Failed to send news: ${article.headline}`, err);
+    }
   }
 }
 
@@ -64,7 +105,7 @@ function toggleInsightLoop() {
 
   if (looping.value) {
     generateInsights(); // run immediately
-    loopInterval = setInterval(generateInsights, 10000); // every 10s (adjust as needed)
+    loopInterval = setInterval(generateInsights, 10000); // every 10s
   } else {
     clearInterval(loopInterval);
     loopInterval = null;
@@ -74,6 +115,7 @@ function toggleInsightLoop() {
 onMounted(fetchNews);
 watch(() => props.ticker, fetchNews);
 </script>
+
 
 
 <style scoped>
