@@ -1,9 +1,11 @@
 package dao;
 
-import model.Stock;
+import javax.sql.DataSource;
+
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
-import javax.sql.DataSource;
+
+import model.Stock;
 
 public class JdbcStockDao implements StockDao {
 
@@ -18,7 +20,7 @@ public class JdbcStockDao implements StockDao {
         String sql = "CREATE TABLE IF NOT EXISTS stock (" +
                      "ticker TEXT PRIMARY KEY, " +
                      "date TEXT, " +
-                     "price TEXT)";
+                     "price DECIMAL)";
         jdbcTemplate.execute(sql);
     }
 
@@ -36,7 +38,7 @@ public class JdbcStockDao implements StockDao {
             Stock stock = new Stock();
             stock.setTicker(results.getString("ticker"));
             stock.setDate(results.getString("date"));
-            stock.setPrice(results.getString("price"));
+            stock.setPrice(results.getBigDecimal("price"));
             return stock;
         }
         return null;

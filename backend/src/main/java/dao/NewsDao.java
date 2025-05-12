@@ -1,7 +1,10 @@
 package dao;
+
+import java.util.List;
+
 import model.News;
 
 public interface NewsDao {
     void insertNews(News news);
-    News getNewsByTicker(String ticker);
+    List<News> getNewsByTicker(String ticker);
 }
