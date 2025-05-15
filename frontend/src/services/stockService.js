@@ -1,4 +1,6 @@
 // src/services/stockService.js
+import { websocketClient } from "@polygon.io/client-js";
+import { sendToBackend } from './api.js';
 
 const API_KEY = import.meta.env.VITE_ALPACA_API_KEY;
 const API_SECRET = import.meta.env.VITE_ALPACA_SECRET_KEY;
@@ -35,7 +37,41 @@ export async function getGainersWithPrices() {
   }
 }
 
-// Poll gainers every X milliseconds and detect changes
+// Fetch full-day minute-by-minute price history for a stock from Polygon and send to backend
+export async function getDailyPriceHistory(ticker, date) {
+  const apiKey = import.meta.env.VITE_POLY_API_KEY;
+  const url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/1/minute/${date}/${date}?adjusted=true&sort=asc&limit=50000&apiKey=${apiKey}`;
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (!data.results || !Array.isArray(data.results)) {
+      console.error("❌ No price data returned for", ticker);
+      return [];
+    }
+
+    const prices = data.results.map(item => {
+      const dateObj = new Date(item.t);
+      return {
+        ticker,
+        date: dateObj.toISOString(),
+        price: item.c.toString()
+      };
+    });
+
+    // 🔁 Send each price to backend using sendToBackend()
+    for (const price of prices) {
+      await sendToBackend(price, []);
+    }
+
+    return prices;
+  } catch (err) {
+    console.error("❌ Error fetching price history:", err);
+    return [];
+  }
+}
+
 export async function monitorGainers(intervalMs = 6000, onChange = null) {
   let previousTickers = [];
 
@@ -49,7 +85,6 @@ export async function monitorGainers(intervalMs = 6000, onChange = null) {
       console.log("Current :", currentTickers);
       previousTickers = currentTickers;
 
-      // Optional: call external function if provided
       if (onChange) onChange(gainers);
     } else {
       console.log("✅ No change at", new Date().toLocaleTimeString());
@@ -90,38 +125,48 @@ export async function getStockNews(ticker) {
   }
 }
 
-export async function getDailyPrices(ticker) {
-  const apiKey = import.meta.env.VITE_FINNHUB_API_KEY;
+export function subscribeToLivePrice(ticker, onPriceUpdate) {
+  const apiKey = import.meta.env.VITE_POLY_API_KEY;
+  const baseUrl = `https://api.polygon.io/v2/aggs/ticker/${ticker}/prev?adjusted=true&apiKey=${apiKey}`;
 
-  // Get past 5 days of data
-  const end = Math.floor(Date.now() / 1000); // now in UNIX time
-  const start = end - 5 * 24 * 60 * 60;       // 5 days ago
+  console.log(`📡 Starting polling for ${ticker}`);
 
-  const url = `https://finnhub.io/api/v1/stock/candle?symbol=${ticker}&resolution=D&from=${start}&to=${end}&token=${apiKey}`;
+  let intervalId = null;
 
-  try {
-    const res = await fetch(url);
-    const json = await res.json();
+  const fetchPrice = async () => {
+    try {
+      const res = await fetch(baseUrl);
+      const json = await res.json();
 
-    if (json.s !== 'ok') {
-      console.warn("No chart data returned.");
-      return [];
+      if (json.results && json.results.length > 0) {
+        const result = json.results[0];
+        console.log('💰 Fetched price data:', result);
+        onPriceUpdate({
+          symbol: result.T,
+          price: result.c,
+          timestamp: new Date(result.t).toISOString()
+        });
+      } else {
+        console.warn('⚠️ No price data returned from Polygon.');
+      }
+    } catch (err) {
+      console.error('❌ Error fetching price data:', err);
     }
+  };
 
-    return json.t.map((timestamp, i) => ({
-      date: new Date(timestamp * 1000).toISOString().split('T')[0],
-      close: json.c[i]
-    }));
-  } catch (err) {
-    console.error("❌ Error fetching chart data:", err);
-    return [];
-  }
+  fetchPrice();
+  intervalId = setInterval(fetchPrice, 12000);
+
+  return () => {
+    console.log(`👋 Stopping polling for ${ticker}`);
+    clearInterval(intervalId);
+  };
 }
 
 export async function generateNewsInsights(newsArray) {
-  const apiKey = import.meta.env.VITE_OPENAI_KEY; // Or VITE_DEEPSEEK_KEY
-  const endpoint = 'https://api.openai.com/v1/chat/completions'; // or DeepSeek URL
-  const model = 'gpt-3.5-turbo'; // or 'deepseek-chat'
+  const apiKey = import.meta.env.VITE_OPENAI_KEY;
+  const endpoint = 'https://api.openai.com/v1/chat/completions';
+  const model = 'gpt-3.5-turbo';
 
   const systemPrompt = `
 You are a Financial News Analysis Assistant for a financial advisor. For every article, provide:
