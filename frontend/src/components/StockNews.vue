@@ -97,8 +97,13 @@ async function sendNewsToBackend(newsList, ticker) {
 
 async function generateInsights() {
   if (!news.value.length) return;
-  insights.value = await generateNewsInsights(news.value);
+  insights.value = [];
+
+  await generateNewsInsights(news.value, (insight) => {
+    insights.value.push(insight); // pushed individually as they arrive
+  });
 }
+
 
 function toggleInsightLoop() {
   looping.value = !looping.value;

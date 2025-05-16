@@ -1,6 +1,7 @@
 // src/services/stockService.js
 import { websocketClient } from "@polygon.io/client-js";
 import { sendToBackend } from './api.js';
+import OpenAI from "openai";
 
 const API_KEY = import.meta.env.VITE_ALPACA_API_KEY;
 const API_SECRET = import.meta.env.VITE_ALPACA_SECRET_KEY;
@@ -38,9 +39,9 @@ export async function getGainersWithPrices() {
 }
 
 // Fetch full-day minute-by-minute price history for a stock from Polygon and send to backend
-export async function getDailyPriceHistory(ticker, date) {
+export async function getDailyPriceHistory(ticker, startDate, endDate) {
   const apiKey = import.meta.env.VITE_POLY_API_KEY;
-  const url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/1/minute/${date}/${date}?adjusted=true&sort=asc&limit=50000&apiKey=${apiKey}`;
+  const url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/1/minute/${startDate}/${endDate}?adjusted=true&sort=asc&limit=50000&apiKey=${apiKey}`;
 
   try {
     const res = await fetch(url);
@@ -60,7 +61,7 @@ export async function getDailyPriceHistory(ticker, date) {
       };
     });
 
-    // 🔁 Send each price to backend using sendToBackend()
+    // Optional: send all to backend
     for (const price of prices) {
       await sendToBackend(price, []);
     }
@@ -71,6 +72,7 @@ export async function getDailyPriceHistory(ticker, date) {
     return [];
   }
 }
+
 
 export async function monitorGainers(intervalMs = 6000, onChange = null) {
   let previousTickers = [];
@@ -163,11 +165,13 @@ export function subscribeToLivePrice(ticker, onPriceUpdate) {
   };
 }
 
-export async function generateNewsInsights(newsArray) {
-  const apiKey = import.meta.env.VITE_OPENAI_KEY;
-  const endpoint = 'https://api.openai.com/v1/chat/completions';
-  const model = 'gpt-3.5-turbo';
 
+const openai = new OpenAI({
+  apiKey: import.meta.env.VITE_OPENAI_KEY,
+  dangerouslyAllowBrowser: true
+});
+
+export async function generateNewsInsights(newsArray, onInsightReceived) {
   const systemPrompt = `
 You are a Financial News Analysis Assistant for a financial advisor. For every article, provide:
 
@@ -179,8 +183,6 @@ You are a Financial News Analysis Assistant for a financial advisor. For every a
 Use clear, friendly language with headings or bullet points.
 `;
 
-  const results = [];
-
   for (const article of newsArray) {
     const userPrompt = `
 Here is the news article for analysis:
@@ -191,32 +193,23 @@ Here is the news article for analysis:
 Please provide context, short- and long-term impact, and a recommendation.
 `;
 
-    const body = {
-      model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ]
-    };
-
     try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`
-        },
-        body: JSON.stringify(body)
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ]
       });
 
-      const json = await res.json();
-      const insight = json.choices?.[0]?.message?.content || 'No response';
-      results.push({ headline: article.headline, insight });
+      const content = completion.choices?.[0]?.message?.content || "No response";
+
+      // 👇 Send back partial result to UI immediately
+      onInsightReceived({ headline: article.headline, insight: content });
+
     } catch (err) {
-      console.error('❌ Error generating insight:', err);
-      results.push({ headline: article.headline, insight: 'Error generating insight' });
+      console.error("❌ Error generating insight:", err);
+      onInsightReceived({ headline: article.headline, insight: "⚠️ Error generating insight" });
     }
   }
-
-  return results;
 }

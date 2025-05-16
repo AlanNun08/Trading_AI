@@ -8,7 +8,6 @@
 
 <script setup>
 import { ref, watch, onMounted, onUnmounted } from 'vue';
-import axios from 'axios';
 import { Line } from 'vue-chartjs';
 import {
   Chart as ChartJS,
@@ -20,9 +19,9 @@ import {
   LinearScale,
   CategoryScale
 } from 'chart.js';
-import { subscribeToLivePrice } from '../services/stockService.js';
-import { sendToBackend } from '../services/api.js';
 
+import { getDailyPriceHistory, subscribeToLivePrice } from '../services/stockService.js';
+import { sendToBackend } from '../services/api.js';
 
 ChartJS.register(
   Title,
@@ -51,103 +50,105 @@ let unsubscribe = null;
 let callCount = 0;
 let callTimer = null;
 
-// ⏱️ Reset call count every 60s
 function startRateLimitReset() {
+  if (callTimer) clearInterval(callTimer);
+  callCount = 0;
   callTimer = setInterval(() => {
     callCount = 0;
   }, 60000);
 }
 
-// 🚀 Get data from backend (checks DB or calls Polygon API if not cached)
-async function loadChartHistory(ticker) {
-  try {
-    const res = await axios.get(`/api/data/prices?ticker=${ticker}`);
-    const prices = res.data;
+function getLocalISODate(date) {
+  return date.toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
+}
 
-    console.log(`🛬 Response for ${ticker}:`, prices);
+async function setupChart() {
+  if (unsubscribe) unsubscribe();
+  callCount = 0;
 
-    if (!Array.isArray(prices) || prices.length === 0) {
-      console.warn(`⚠️ No data returned for ${ticker}`);
-      return;
-    }
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
 
-    chartData.value = {
-      labels: prices.map(p => new Date(p.date).toLocaleTimeString()),
-      datasets: [{
-        label: `${ticker} Price`,
-        data: prices.map(p => p.price),
-        fill: false,
-        borderColor: '#42A5F5',
-        tension: 0.1
-      }]
-    };
+  const startDate = getLocalISODate(yesterday); // e.g., "2025-05-14"
+  const endDate = getLocalISODate(today);       // e.g., "2025-05-15"
 
-    console.log(`📊 Loaded ${prices.length} points from DB/API`);
-  } catch (err) {
-    console.error('❌ Failed to load price history:', err);
-  }
+
+  const prices = await getDailyPriceHistory(props.ticker, startDate, endDate);
+
+  chartData.value = {
+    labels: prices.map(p => new Date(p.date).toLocaleTimeString()),
+    datasets: [{
+      label: `${props.ticker} Price`,
+      data: prices.map(p => p.price),
+      fill: false,
+      borderColor: '#42A5F5',
+      tension: 0.1
+    }]
+  };
+
+  console.log(`📊 Chart loaded with ${prices.length} points from ${startDate} to ${endDate}`);
+  startLiveCharting();
 }
 
 
-// 📡 Subscribe to live prices using polling (limited to 5/min)
+
 function startLiveCharting() {
   if (unsubscribe) unsubscribe();
 
   unsubscribe = subscribeToLivePrice(props.ticker, async (priceData) => {
-    if (!chartData.value || !chartData.value.labels || !chartData.value.datasets?.[0]?.data) {
-    console.error('❌ chartData not fully initialized');
-    return;
-  }
-
-
+    if (!chartData.value) return;
     if (callCount >= 5) return;
 
     const time = new Date(priceData.timestamp).toLocaleTimeString();
 
-    chartData.value.labels.push(time);
-    chartData.value.datasets[0].data.push(priceData.price);
+    // Copy existing chart data to preserve reactivity
+    const labels = [...chartData.value.labels, time];
+    const data = [...chartData.value.datasets[0].data, priceData.price];
 
-    if (chartData.value.labels.length > 30) {
-      chartData.value.labels.shift();
-      chartData.value.datasets[0].data.shift();
+    // Trim to 30 points
+    if (labels.length > 30) {
+      labels.shift();
+      data.shift();
     }
+
+    chartData.value = {
+      labels,
+      datasets: [{
+        ...chartData.value.datasets[0],
+        data
+      }]
+    };
 
     await sendToBackend({
       ticker: priceData.symbol,
       date: priceData.timestamp,
       price: priceData.price
-    }, null);
+    }, []);
 
     callCount++;
-    console.log(`📈 Live update ${callCount}/5 this minute`);
+    console.log(`📈 Live update ${callCount}/5 for ${props.ticker}`);
   });
 }
 
 
-
-// 🧩 Full setup when ticker is mounted or changes
-async function setupChart() {
-  if (unsubscribe) unsubscribe();
- 
-  await loadChartHistory(props.ticker); // 1 backend call
-  startLiveCharting();                  // live updates after history
-}
-
-// Lifecycle
 onMounted(() => {
   setupChart();
   startRateLimitReset();
 });
 
-watch(() => props.ticker, setupChart);
+watch(() => props.ticker, () => {
+  console.log(`🔁 Switching to new ticker: ${props.ticker}`);
+  setupChart();
+  startRateLimitReset();
+});
 
 onUnmounted(() => {
   if (unsubscribe) unsubscribe();
   if (callTimer) clearInterval(callTimer);
 });
+
 </script>
-
-
 
 <style scoped>
 .stocks-view {
