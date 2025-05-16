@@ -54,5 +54,14 @@ public class DataController {
         return ResponseEntity.ok("Data saved successfully.");
     }
 
+    @PostMapping("/update/summary")
+    public ResponseEntity<String> updateSummary(@RequestBody News updatedNews) {
+        if (updatedNews.getTicker() == null || updatedNews.getDate() == null || updatedNews.getHeadline() == null) {
+            return ResponseEntity.badRequest().body("Missing required fields");
+        }
 
+        // Update existing news with matching ticker + date + headline
+        newsService.updateAiSummary(updatedNews);
+        return ResponseEntity.ok("Summary updated");
+    } 
 }

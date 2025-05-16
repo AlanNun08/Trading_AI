@@ -44,6 +44,5 @@ public class StockServiceImpl implements StockService {
         stockDao.deleteStockPricesByDate(ticker, date);
     }
 
-
 }
 

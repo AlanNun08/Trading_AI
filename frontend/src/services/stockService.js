@@ -1,6 +1,6 @@
 // src/services/stockService.js
-import { websocketClient } from "@polygon.io/client-js";
-import { sendToBackend } from './api.js';
+
+import { sendToBackend, updateInsightOnBackend } from './api.js';
 import OpenAI from "openai";
 
 const API_KEY = import.meta.env.VITE_ALPACA_API_KEY;
@@ -204,12 +204,18 @@ Please provide context, short- and long-term impact, and a recommendation.
 
       const content = completion.choices?.[0]?.message?.content || "No response";
 
-      // 👇 Send back partial result to UI immediately
-      onInsightReceived({ headline: article.headline, insight: content });
+      const updated = {
+        ...article,
+        summary: content // ✅ Replace 'summary' with the generated insight
+      };
+
+      onInsightReceived(updated); // Update in UI
+      console.log("📤 News sending to backend:", updated);
+      await updateInsightOnBackend(updated); // Update in DB
 
     } catch (err) {
       console.error("❌ Error generating insight:", err);
-      onInsightReceived({ headline: article.headline, insight: "⚠️ Error generating insight" });
+      onInsightReceived({ ...article, summary: "⚠️ Error generating insight" });
     }
   }
 }

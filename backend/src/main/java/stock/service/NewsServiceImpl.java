@@ -1,10 +1,11 @@
 package stock.service;
 
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
 import stock.dao.NewsDao;
 import stock.model.News;
-
-import java.util.List;
-import org.springframework.stereotype.Service;
 
 @Service
 public class NewsServiceImpl implements NewsService {
@@ -26,5 +27,10 @@ public class NewsServiceImpl implements NewsService {
     public List<News> getNewsByTicker(String ticker) {
         return newsDao.getNewsByTicker(ticker);
     }
+    @Override
+    public void updateAiSummary(News news) {
+        newsDao.updateSummary(news);
+    }
+
 }
 

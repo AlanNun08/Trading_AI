@@ -11,7 +11,4 @@ public interface StockService {
     boolean stockPricesExistForDate(String ticker, String date);
     List<Stock> getStockPricesByDate(String ticker, String date);
     void deleteStockPricesByDate(String ticker, String date);
-
-
 }
-

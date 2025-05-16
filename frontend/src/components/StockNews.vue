@@ -95,14 +95,20 @@ async function sendNewsToBackend(newsList, ticker) {
   }
 }
 
-async function generateInsights() {
+function generateInsights() {
   if (!news.value.length) return;
-  insights.value = [];
 
-  await generateNewsInsights(news.value, (insight) => {
-    insights.value.push(insight); // pushed individually as they arrive
+  // Reset and pre-fill to allow indexed updates
+  insights.value = Array(news.value.length).fill(null);
+
+  generateNewsInsights(news.value, (insight) => {
+    const index = news.value.findIndex(n => n.headline === insight.headline);
+    if (index !== -1) {
+      insights.value[index] = insight;
+    }
   });
 }
+
 
 
 function toggleInsightLoop() {

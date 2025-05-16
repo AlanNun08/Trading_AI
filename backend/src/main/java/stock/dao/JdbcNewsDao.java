@@ -60,4 +60,10 @@ public class JdbcNewsDao implements NewsDao {
         }
         return newsList;
     }
+
+    @Override
+    public void updateSummary(News news) {
+        String sql = "UPDATE news SET ai_summary = ? WHERE ticker = ? AND date = ? AND headline = ?";
+        jdbcTemplate.update(sql, news.getAiSummary(), news.getTicker(), news.getDate(), news.getHeadline());
+    }
 }
