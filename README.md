@@ -1,100 +1,174 @@
-## 📊 Trading AI – Full Stack App
+# 📈 Trading AI
 
-This project is a full-stack trading intelligence dashboard that:
+A web-based application for viewing top stock gainers, real-time price charts, and AI-generated insights on financial news.
 
-* Displays **top stock gainers** with daily price data
-* Shows **real-time financial news** for each stock
-* Generates **AI-powered news insights**
-* Sends all relevant data automatically to a **Java Spring Boot backend** for storage
+Built with:
 
----
-
-## ⚙️ Technologies Used
-
-### 🔵 Frontend
-
-* **Vue 3 + Vite**
-* `fetch()` for API communication
-* Chart.js (optional for price graphs)
-* Components:
-
-  * `Stocking.vue` – shows daily top gainers and sends them to backend
-  * `Stockiness.vue` – shows news for a selected stock, generates insights, and sends to backend
-
-### ☕ Backend
-
-* **Java 17**, **Spring Boot 2.7**
-* REST API endpoints with `@RestController`
-* JDBC with `JdbcTemplate`
-* SQLite or H2 for local SQL storage
-* DAO pattern for `Stock` and `News`
+* ⚙️ Java Spring Boot (backend)
+* 🔤️ Vue 3 + Chart.js (frontend)
+* 📡 Polygon.io for stock prices
+* 🧠 OpenAI API for financial insights
+* 📃️ SQLite for storing stock & news data
 
 ---
 
-## 🔗 Frontend–Backend Integration
+## 🚀 Features
 
-### ✅ StockInfo.vue
+### 🔥 Top Gainers
 
-* Fetches daily top gainers via Polygon or Alpaca API
-* Automatically sends each stock's `ticker`, `date`, and `price` to:
+* Displays daily top gainers from the stock market
+* Clicking a ticker loads news and a live price chart
 
-  ```
-  POST http://localhost:8080/api/data/save
-  ```
+### 📊 Price Chart
 
-### ✅ StockNews.vue
+* Fetches **minute-by-minute price history** via Polygon
+* Subscribes to **live prices** using polling (5 per minute)
+* Displays last 30 points on a real-time Line chart
+* Sends each price point to the backend for persistence
 
-* Fetches latest news for a specific stock
-* Automatically sends each news item (`headline`, `source`, `summary`) to the backend
+### 📰 News + AI Insights
+
+* Fetches the latest stock news
+* Stores news in the database with `headline`, `source`, and `summary`
+* AI generates insights using OpenAI GPT-4o-mini:
+
+  * Context
+  * Short-Term Impact
+  * Long-Term Impact
+  * Recommendation
+* Each insight is **immediately shown in the UI** and sent to the backend
 
 ---
 
-## 📁 Backend Project Structure
+## 🧩 Technologies
+
+| Layer    | Stack                                                                   |
+| -------- | ----------------------------------------------------------------------- |
+| Frontend | Vue 3, Chart.js, Vite                                                   |
+| Backend  | Java Spring Boot, JdbcTemplate                                          |
+| Database | SQLite (`market_data.db`)                                               |
+| APIs     | [Polygon.io](https://polygon.io), [OpenAI](https://platform.openai.com) |
+| Hosting  | Localhost                                                               |
+
+---
+
+## 🛠️ Project Structure
 
 ```
-src/main/java/
-│
-├── controller/
-│   └── DataController.java     // Handles POST from frontend
-│
-├── service/
-│   ├── StockService.java
-│   ├── StockServiceImpl.java
-│   ├── NewsService.java
-│   └── NewsServiceImpl.java
-│
-├── dao/
-│   ├── StockDao.java
-│   ├── JdbcStockDao.java
-│   ├── NewsDao.java
-│   └── JdbcNewsDao.java
-│
-├── model/
-│   ├── Stock.java
-│   └── News.java
-│
-├── dto/
-│   └── SaveRequest.java        // Accepts combined stock + news data
-│
-└── Application.java            // Spring Boot entry point
+Trading_AI/
+├── backend/
+│   ├── src/main/java/stock/
+│   │   ├── controller/         # REST APIs
+│   │   ├── dao/                # JDBC DAOs
+│   │   ├── service/            # Business logic
+│   │   ├── model/              # POJOs
+│   │   ├── dto/                # Request DTOs
+│   │   └── Application.java    # Spring Boot main
+│   └── market_data.db          # SQLite DB
+└── frontend/
+    ├── components/
+    │   ├── TopGainers.vue
+    │   ├── StockPriceChart.vue
+    │   └── StockNews.vue
+    ├── services/
+    │   ├── stockService.js     # Polygon + OpenAI integration
+    │   └── api.js              # Calls to backend
+    └── App.vue
 ```
 
 ---
 
-## 🚀 To Run
+## 🔧 Running the App
 
-### 👥 Backend
+### 📦 Backend (Java + Spring Boot)
 
 ```bash
-cd backend/
-mvn clean install
-mvn spring-boot:run
+cd backend
+./mvnw spring-boot:run
 ```
 
-### 🌐 Frontend
+* SQLite DB: `market_data.db` in `/backend/database/`
+* Runs at: `http://localhost:8080`
+
+> Ensure your `.env` or environment contains `POLY_API_KEY` and OpenAI keys.
+
+---
+
+### 🌐 Frontend (Vue + Vite)
 
 ```bash
-cd frontend/
+cd frontend
 npm install
 npm run dev
+```
+
+* Runs at: `http://localhost:5173`
+* Edit API keys in `.env`:
+
+  ```
+  VITE_POLY_API_KEY=your_polygon_key
+  VITE_OPENAI_KEY=your_openai_key
+  ```
+
+---
+
+## 🔪 API Endpoints
+
+### Save stock + news
+
+```http
+POST /api/data/save
+```
+
+```json
+{
+  "stock": { "ticker": "AAPL", "date": "2025-05-15T10:30:00", "price": "175.32" },
+  "news": [
+    {
+      "ticker": "AAPL",
+      "date": "2025-05-15",
+      "headline": "Apple beats earnings",
+      "source": "Reuters",
+      "aiSummary": "Apple showed strong growth in services and iPhone revenue."
+    }
+  ]
+}
+```
+
+### Update AI Summary
+
+```http
+POST /api/data/update/summary
+```
+
+```json
+{
+  "ticker": "AAPL",
+  "date": "2025-05-15",
+  "headline": "Apple beats earnings",
+  "source": "Reuters",
+  "aiSummary": "Updated analysis of Apple earnings performance..."
+}
+```
+
+---
+
+## ⚠️ Rate Limits
+
+* **Polygon:** Free tier may limit requests — only fetch price history once per stock/day
+* **OpenAI GPT-4o-mini:** 3 RPM (requests per minute). App handles this with `setInterval`
+
+---
+
+## 📬 Contact / Ideas
+
+Have an idea for improvement? Found a bug? Create an issue or contact [Alan Nunez](https://github.com/AlanNun08).
+
+---
+
+## 📄 License
+
+MIT License — use, modify, and build upon this freely.
+
+```
 ```

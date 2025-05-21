@@ -40,7 +40,7 @@ export async function updateInsightOnBackend(newsItem) {
         date: newsItem.date,
         headline: newsItem.headline,
         source: newsItem.source,
-        aiSummary: newsItem.summary,
+        aiSummary: newsItem.aiSummary,
       }),
     });
 

@@ -105,27 +105,121 @@ function getEasternDateString() {
   return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }
 
-export async function getStockNews(ticker) {
-  const apiKey = import.meta.env.VITE_FINNHUB_API_KEY;
+export async function getStockNews(ticker, startDate, endDate) {
   const today = getEasternDateString();
+  const allArticles = [];
 
-  const url = `https://finnhub.io/api/v1/company-news?symbol=${ticker}&from=${today}&to=${today}&token=${apiKey}`;
-
+  // 1. Finnhub
   try {
+    const apiKey = import.meta.env.VITE_FINNHUB_API_KEY;
+    const finnhubUrl = `https://finnhub.io/api/v1/company-news?symbol=${ticker}&from=${startDate}&to=${endDate}&token=${apiKey}`;
+    const res = await fetch(finnhubUrl);
+    const data = await res.json();
+    data.forEach(article => {
+      allArticles.push({
+        ticker,
+        headline: article.headline,
+        summary: article.summary,
+        source: article.source || 'Finnhub',
+        datetime: article.datetime,
+      });
+    });
+  } catch (err) {
+    console.error(`❌ Finnhub error for ${ticker}:`, err);
+  }
+
+  // 2. Newsdata.io
+  try {
+    const key = import.meta.env.VITE_NEWSDATA_API_KEY;
+    const url = `https://newsdata.io/api/1/news?apikey=${key}&q=${ticker}&language=en&category=business`;
     const res = await fetch(url);
     const data = await res.json();
-
-    return data.map(article => ({
-      headline: article.headline,
-      summary: article.summary,
-      source: article.source,
-      datetime: article.datetime,
-    }));
+    data.results?.forEach(article => {
+      allArticles.push({
+        ticker,
+        headline: article.title,
+        summary: article.description,
+        source: article.source_id || 'Newsdata.io',
+        datetime: new Date(article.pubDate).getTime() / 1000,
+      });
+    });
   } catch (err) {
-    console.error(`❌ Error fetching news for ${ticker}:`, err);
-    return [];
+    console.error(`❌ Newsdata.io error for ${ticker}:`, err);
   }
+
+  // 3. Marketaux
+  try {
+    const key = import.meta.env.VITE_MARKETAUX_API_KEY;
+    const url = `https://api.marketaux.com/v1/news/all?symbols=${ticker}&filter_entities=true&language=en&api_token=${key}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    data.data?.forEach(article => {
+      allArticles.push({
+        ticker,
+        headline: article.title,
+        summary: article.description,
+        source: article.source || 'Marketaux',
+        datetime: new Date(article.published_at).getTime() / 1000,
+      });
+    });
+  } catch (err) {
+    console.error(`❌ Marketaux error for ${ticker}:`, err);
+  }
+
+  // 4. GNews
+  try {
+    const key = import.meta.env.VITE_GNEWS_API_KEY;
+    const url = `https://gnews.io/api/v4/search?q=${ticker}&token=${key}&lang=en`;
+    const res = await fetch(url);
+    const data = await res.json();
+    data.articles?.forEach(article => {
+      allArticles.push({
+        ticker,
+        headline: article.title,
+        summary: article.description,
+        source: article.source.name || 'GNews',
+        datetime: new Date(article.publishedAt).getTime() / 1000,
+      });
+    });
+  } catch (err) {
+    console.error(`❌ GNews error for ${ticker}:`, err);
+  }
+
+  // ✅ Send articles to backend after collection
+  if (allArticles.length > 0) {
+    for (const article of allArticles) {
+      const payload = {
+        stock: {
+          ticker: article.ticker,
+          date: new Date(article.datetime * 1000).toISOString().split('T')[0],
+          price: "0.0"
+        },
+        news: [{
+          ticker: article.ticker,
+          date: new Date(article.datetime * 1000).toISOString().split('T')[0],
+          headline: article.headline,
+          source: article.source,
+          aiSummary: article.summary
+        }]
+      };
+
+      try {
+        const res = await fetch('http://localhost:8080/api/data/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const result = await res.text();
+        console.log("📤 Sent article to backend:", article.headline, result);
+      } catch (err) {
+        console.error("❌ Failed to send article to backend:", article.headline, err);
+      }
+    }
+  }
+
+  return allArticles;
 }
+
 
 export function subscribeToLivePrice(ticker, onPriceUpdate) {
   const apiKey = import.meta.env.VITE_POLY_API_KEY;
@@ -171,7 +265,7 @@ const openai = new OpenAI({
   dangerouslyAllowBrowser: true
 });
 
-export async function generateNewsInsights(newsArray, onInsightReceived) {
+export async function generateNewsInsights(newsArray, onInsightReceived, ticker) {
   const systemPrompt = `
 You are a Financial News Analysis Assistant for a financial advisor. For every article, provide:
 
@@ -205,17 +299,20 @@ Please provide context, short- and long-term impact, and a recommendation.
       const content = completion.choices?.[0]?.message?.content || "No response";
 
       const updated = {
-        ...article,
-        summary: content // ✅ Replace 'summary' with the generated insight
+        ticker,
+        date: new Date(article.datetime * 1000).toISOString().split('T')[0],
+        headline: article.headline,
+        source: article.source,
+        aiSummary: content
       };
 
-      onInsightReceived(updated); // Update in UI
-      console.log("📤 News sending to backend:", updated);
-      await updateInsightOnBackend(updated); // Update in DB
+      onInsightReceived(updated);
+      console.log("📤 Sending updated insight to backend:", updated);
+      await updateInsightOnBackend(updated);
 
     } catch (err) {
       console.error("❌ Error generating insight:", err);
-      onInsightReceived({ ...article, summary: "⚠️ Error generating insight" });
+      onInsightReceived({ ...article, aiSummary: "⚠️ Error generating insight" });
     }
   }
 }

@@ -1,17 +1,25 @@
 <template>
   <div class="dashboard">
-    <h1>📊 Stock Dashboard</h1>
+    <header class="dashboard-header">
+      <h1>📊 Stock Dashboard</h1>
+    </header>
 
-    <TopGainers @selectTicker="setTicker" />
+    <section class="top-gainers-section">
+      <TopGainers @selectTicker="setTicker" />
+    </section>
 
-    <div v-if="selectedTicker" class="flex-board">
-      <StockNews :ticker="selectedTicker" />
-      <StockPriceChart :ticker="selectedTicker" />
-    </div>
+    <section v-if="selectedTicker" class="content-section">
+      <div class="content-card">
+        <StockNews :ticker="selectedTicker" />
+      </div>
+      <div class="content-card">
+        <StockPriceChart :ticker="selectedTicker" />
+      </div>
+    </section>
 
-    <div v-else class="placeholder">
-      <p>Select a stock from the gainers list to see news and price chart.</p>
-    </div>
+    <section v-else class="placeholder-section">
+      <p>Select a stock from the gainers list to view news and price details.</p>
+    </section>
   </div>
 </template>
 
@@ -22,38 +30,79 @@ import StockNews from '@/components/StockNews.vue';
 import StockPriceChart from '@/components/StockPriceChart.vue';
 
 const selectedTicker = ref(null);
-function setTicker(ticker) {
-  selectedTicker.value = ticker;
-}
+const setTicker = (ticker) => selectedTicker.value = ticker;
 </script>
 
 <style scoped>
 .dashboard {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   padding: 2rem;
-  font-family: sans-serif;
+  max-width: 1200px;
+  margin: auto;
+  background-color: #f1f3f5;
+  border-radius: 20px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.05);
+  transition: background 0.3s ease;
 }
 
-.flex-board {
+.dashboard-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+  color: #212529;
+  font-size: 2rem;
+  letter-spacing: 0.5px;
+}
+
+.top-gainers-section {
+  margin-bottom: 2rem;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.content-section {
   display: flex;
-  flex-wrap: wrap;
   gap: 2rem;
-  margin-top: 2rem;
+  flex-wrap: wrap;
+  animation: fadeIn 0.6s ease-in-out;
 }
 
-/* Make each section take full width on mobile, half on desktop */
-.flex-board > * {
-  flex: 1 1 100%; /* full width on small screens */
+.content-card {
+  background: linear-gradient(to bottom, #ffffff, #f8f9fa);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  padding: 2rem;
+  flex: 1 1 100%;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid #dee2e6;
+}
+
+.content-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+}
+
+.placeholder-section {
+  text-align: center;
+  color: #868e96;
+  padding: 3rem;
+  border: 2px dashed #ced4da;
+  border-radius: 16px;
+  background-color: #ffffff;
+  animation: fadeIn 0.7s ease-in;
+  font-style: italic;
+  font-size: 1.1rem;
 }
 
 @media (min-width: 768px) {
-  .flex-board > * {
-    flex: 1 1 45%; /* two items per row on desktop */
+  .content-card {
+    flex: 1 1 calc(50% - 1rem);
   }
 }
 
-.placeholder {
-  margin-top: 2rem;
-  font-style: italic;
-  color: #888;
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>
