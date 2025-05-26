@@ -15,6 +15,64 @@ const options = {
   }
 };
 
+export async function get30DayDailyPrices(ticker) {
+  const apiKey = import.meta.env.VITE_POLY_API_KEY;
+  const { startDate, endDate } = getLast30DaysRange(); // returns YYYY-MM-DD strings
+
+  const url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/1/day/${startDate}/${endDate}?adjusted=true&sort=asc&limit=5000&apiKey=${apiKey}`;
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (!data.results || !Array.isArray(data.results)) {
+      console.error("❌ No daily price data returned for", ticker);
+      return [];
+    }
+
+    const prices = data.results.map(item => {
+      const dateObj = new Date(item.t);
+      return {
+        ticker,
+        date: dateObj.toISOString().split('T')[0], // YYYY-MM-DD
+        price: item.c.toString(), // closing price as string
+      };
+    });
+
+    // Optional: Send each price to backend
+    for (const price of prices) {
+      await sendToBackend(price, []); // adapt as needed
+    }
+
+    return prices;
+  } catch (err) {
+    console.error("❌ Error fetching 30-day daily prices:", err);
+    return [];
+  }
+}
+
+function getMarketDay() {
+  const now = new Date();
+
+  // EST offset: use -5 in winter, -4 in summer (EDT)
+  // We'll assume DST is in effect from March to November (U.S. market standard)
+  const jan = new Date(now.getFullYear(), 0, 1).getTimezoneOffset();
+  const jul = new Date(now.getFullYear(), 6, 1).getTimezoneOffset();
+  const isDST = Math.min(jan, jul) !== now.getTimezoneOffset();
+  const offsetHours = isDST ? -4 : -5;
+
+  // Convert to EST/EDT
+  const est = new Date(now.getTime() + offsetHours * 60 * 60 * 1000);
+
+  const day = est.getDay(); // 0 = Sunday, 6 = Saturday
+
+  // Adjust to Friday if it's weekend
+  if (day === 6) est.setDate(est.getDate() - 1); // Saturday → Friday
+  if (day === 0) est.setDate(est.getDate() - 2); // Sunday → Friday
+
+  return est.toISOString().split('T')[0];
+}
+
 // Get the current list of top 10 gainers
 export async function getGainersWithPrices() {
   try {
@@ -39,9 +97,13 @@ export async function getGainersWithPrices() {
 }
 
 // Fetch full-day minute-by-minute price history for a stock from Polygon and send to backend
-export async function getDailyPriceHistory(ticker, startDate, endDate) {
+export async function getDailyPriceHistory(ticker) {
   const apiKey = import.meta.env.VITE_POLY_API_KEY;
-  const url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/1/minute/${startDate}/${endDate}?adjusted=true&sort=asc&limit=50000&apiKey=${apiKey}`;
+  const today = getMarketDay();
+
+  console.log("today: " , today);
+  
+  const url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/1/minute/${today}/${today}?adjusted=true&sort=asc&limit=50000&apiKey=${apiKey}`;
 
   try {
     const res = await fetch(url);
@@ -73,7 +135,6 @@ export async function getDailyPriceHistory(ticker, startDate, endDate) {
   }
 }
 
-
 export async function monitorGainers(intervalMs = 6000, onChange = null) {
   let previousTickers = [];
 
@@ -98,16 +159,52 @@ export async function monitorGainers(intervalMs = 6000, onChange = null) {
 
 function getEasternDateString() {
   const now = new Date();
-  const estDate = now.toLocaleDateString('en-US', {
-    timeZone: 'America/New_York',
-  });
-  const [month, day, year] = estDate.split('/');
-  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+
+  // Convert to Eastern Time using toLocaleString
+  const estNow = new Date(
+    now.toLocaleString('en-US', { timeZone: 'America/New_York' })
+  );
+
+  // Get the day of the week (0 = Sunday, 6 = Saturday)
+  const dayOfWeek = estNow.getDay();
+
+  // If Saturday (6), subtract 1 day; if Sunday (0), subtract 2 days
+  if (dayOfWeek === 6) {
+    estNow.setDate(estNow.getDate() - 1); // Go back to Friday
+  } else if (dayOfWeek === 0) {
+    estNow.setDate(estNow.getDate() - 2); // Go back to Friday
+  }
+
+  // Format the final adjusted date as YYYY-MM-DD
+  const year = estNow.getFullYear();
+  const month = String(estNow.getMonth() + 1).padStart(2, '0');
+  const day = String(estNow.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
 }
 
-export async function getStockNews(ticker, startDate, endDate) {
+function getLast30DaysRange() {
+  // Get EST time as a string and re-parse it as a Date
+  const estNow = new Date(
+    new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })
+  );
+
+  // Clone and subtract 30 days
+  const pastDate = new Date(estNow);
+  pastDate.setDate(estNow.getDate() - 30);
+
+  const format = (date) => date.toISOString().split('T')[0];
+
+  return {
+    startDate: format(pastDate),
+    endDate: format(estNow),
+  };
+}
+
+export async function getStockNews(ticker) {
   const today = getEasternDateString();
   const allArticles = [];
+  const { startDate, endDate } = getLast30DaysRange();
 
   // 1. Finnhub
   try {
@@ -115,15 +212,20 @@ export async function getStockNews(ticker, startDate, endDate) {
     const finnhubUrl = `https://finnhub.io/api/v1/company-news?symbol=${ticker}&from=${startDate}&to=${endDate}&token=${apiKey}`;
     const res = await fetch(finnhubUrl);
     const data = await res.json();
-    data.forEach(article => {
-      allArticles.push({
-        ticker,
-        headline: article.headline,
-        summary: article.summary,
-        source: article.source || 'Finnhub',
-        datetime: article.datetime,
+    
+    if (Array.isArray(data) && data.length > 0) {
+      data.forEach(article => {
+        allArticles.push({
+          ticker,
+          headline: article.headline,
+          summary: article.summary,
+          source: article.source || 'Finnhub',
+          datetime: article.datetime,
+        });
       });
-    });
+    } else {
+      console.log(`ℹ️ No Finnhub news for ${ticker}`);
+    }
   } catch (err) {
     console.error(`❌ Finnhub error for ${ticker}:`, err);
   }
@@ -134,15 +236,20 @@ export async function getStockNews(ticker, startDate, endDate) {
     const url = `https://newsdata.io/api/1/news?apikey=${key}&q=${ticker}&language=en&category=business`;
     const res = await fetch(url);
     const data = await res.json();
-    data.results?.forEach(article => {
-      allArticles.push({
-        ticker,
-        headline: article.title,
-        summary: article.description,
-        source: article.source_id || 'Newsdata.io',
-        datetime: new Date(article.pubDate).getTime() / 1000,
+    
+    if (Array.isArray(data.results) && data.results.length > 0) {
+      data.results.forEach(article => {
+        allArticles.push({
+          ticker,
+          headline: article.title,
+          summary: article.description,
+          source: article.source_id || 'Newsdata.io',
+          datetime: new Date(article.pubDate).getTime() / 1000,
+        });
       });
-    });
+    } else {
+      console.log(`ℹ️ No Newsdata.io results for ${ticker}`);
+    }
   } catch (err) {
     console.error(`❌ Newsdata.io error for ${ticker}:`, err);
   }
@@ -153,15 +260,20 @@ export async function getStockNews(ticker, startDate, endDate) {
     const url = `https://api.marketaux.com/v1/news/all?symbols=${ticker}&filter_entities=true&language=en&api_token=${key}`;
     const res = await fetch(url);
     const data = await res.json();
-    data.data?.forEach(article => {
-      allArticles.push({
-        ticker,
-        headline: article.title,
-        summary: article.description,
-        source: article.source || 'Marketaux',
-        datetime: new Date(article.published_at).getTime() / 1000,
+    
+    if (Array.isArray(data.data) && data.data.length > 0) {
+      data.data.forEach(article => {
+        allArticles.push({
+          ticker,
+          headline: article.title,
+          summary: article.description,
+          source: article.source || 'Marketaux',
+          datetime: new Date(article.published_at).getTime() / 1000,
+        });
       });
-    });
+    } else {
+      console.log(`ℹ️ No Marketaux news for ${ticker}`);
+    }
   } catch (err) {
     console.error(`❌ Marketaux error for ${ticker}:`, err);
   }
@@ -172,22 +284,29 @@ export async function getStockNews(ticker, startDate, endDate) {
     const url = `https://gnews.io/api/v4/search?q=${ticker}&token=${key}&lang=en`;
     const res = await fetch(url);
     const data = await res.json();
-    data.articles?.forEach(article => {
-      allArticles.push({
-        ticker,
-        headline: article.title,
-        summary: article.description,
-        source: article.source.name || 'GNews',
-        datetime: new Date(article.publishedAt).getTime() / 1000,
+    
+    if (Array.isArray(data.articles) && data.articles.length > 0) {
+      data.articles.forEach(article => {
+        allArticles.push({
+          ticker,
+          headline: article.title,
+          summary: article.description,
+          source: article.source?.name || 'GNews',
+          datetime: new Date(article.publishedAt).getTime() / 1000,
+        });
       });
-    });
+    } else {
+      console.log(`ℹ️ No GNews results for ${ticker}`);
+    }
   } catch (err) {
     console.error(`❌ GNews error for ${ticker}:`, err);
   }
 
+  const uniqueArticles = removeSimilarArticles(allArticles, 0.5);
+
   // ✅ Send articles to backend after collection
-  if (allArticles.length > 0) {
-    for (const article of allArticles) {
+  if (uniqueArticles.length > 0) {
+    for (const article of uniqueArticles) {
       const payload = {
         stock: {
           ticker: article.ticker,
@@ -215,11 +334,14 @@ export async function getStockNews(ticker, startDate, endDate) {
         console.error("❌ Failed to send article to backend:", article.headline, err);
       }
     }
+  } else {
+    console.warn(`⚠️ No news articles found for ${ticker}. Nothing sent to backend.`);
   }
+  console.log(`📰 All fetched articles: ${allArticles.length}`);
+  console.log(`🧹 After deduplication: ${uniqueArticles.length}`);
 
-  return allArticles;
+  return uniqueArticles;
 }
-
 
 export function subscribeToLivePrice(ticker, onPriceUpdate) {
   const apiKey = import.meta.env.VITE_POLY_API_KEY;
@@ -259,60 +381,184 @@ export function subscribeToLivePrice(ticker, onPriceUpdate) {
   };
 }
 
-
 const openai = new OpenAI({
   apiKey: import.meta.env.VITE_OPENAI_KEY,
-  dangerouslyAllowBrowser: true
+  dangerouslyAllowBrowser: true,
 });
 
 export async function generateNewsInsights(newsArray, onInsightReceived, ticker) {
   const systemPrompt = `
-You are a Financial News Analysis Assistant for a financial advisor. For every article, provide:
+  You are a financial assistant. For each news article, provide a structured analysis:
 
-1. **Context**
-2. **Short-Term Impact**
-3. **Long-Term Impact**
-4. **Recommendation**
+  - Context
+  - Short-Term Impact
+  - Long-Term Outlook
+  - Actionable Advice
 
-Use clear, friendly language with headings or bullet points.
-`;
+  Respond using the function definition provided.
+  `;
 
-  for (const article of newsArray) {
+  const functions = [
+    {
+      type: "function", // ✅ This line is required by OpenAI
+      name: "summarizeArticle",
+      description: "Summarize a financial article into structured insights.",
+      parameters: {
+        type: "object",
+        properties: {
+          context: {
+            type: "string",
+            description: "Brief background about the article and why it matters",
+          },
+          short_term: {
+            type: "string",
+            description: "Likely short-term effect on stock price or sentiment",
+          },
+          long_term: {
+            type: "string",
+            description: "Potential long-term company or industry implications",
+          },
+          recommendation: {
+            type: "string",
+            description: "Suggested takeaway or next steps for an investor",
+          },
+        },
+        required: ["context", "short_term", "long_term", "recommendation"],
+      },
+    },
+  ];
+
+
+  for (let i = 0; i < newsArray.length; i++) {
+    const article = newsArray[i];
     const userPrompt = `
-Here is the news article for analysis:
-- **Headline**: ${article.headline}
-- **Source**: ${article.source}
-- **Summary**: ${article.summary}
+Analyze the following article and fill in the insight fields:
 
-Please provide context, short- and long-term impact, and a recommendation.
+- Headline: ${article.headline}
+- Source: ${article.source}
+- Summary: ${article.summary}
 `;
 
     try {
+      console.log(`🔎 Analyzing article ${i + 1}/${newsArray.length}: "${article.headline}"`);
+
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-4o",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ]
+          { role: "user", content: userPrompt },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: functions[0], // ✅ cleaner and reusable
+          }
+        ],
+        tool_choice: "auto",
       });
+      
 
-      const content = completion.choices?.[0]?.message?.content || "No response";
+      const toolResult = completion.choices[0].message.tool_calls?.[0]?.function?.arguments;
+      const parsed = toolResult ? JSON.parse(toolResult) : null;
+
+      if (!parsed) {
+        throw new Error("No valid structured response returned.");
+      }
 
       const updated = {
         ticker,
         date: new Date(article.datetime * 1000).toISOString().split('T')[0],
         headline: article.headline,
         source: article.source,
-        aiSummary: content
+        aiSummary: parsed,
       };
 
+      // ✅ Display immediately
       onInsightReceived(updated);
-      console.log("📤 Sending updated insight to backend:", updated);
+      console.log("✅ Insight generated:", updated);
+
+      // Save to backend
       await updateInsightOnBackend(updated);
 
     } catch (err) {
-      console.error("❌ Error generating insight:", err);
-      onInsightReceived({ ...article, aiSummary: "⚠️ Error generating insight" });
+      console.error(`❌ Failed insight for: ${article.headline}`, err);
+
+      const fallback = {
+        ticker,
+        date: new Date(article.datetime * 1000).toISOString().split('T')[0],
+        headline: article.headline,
+        source: article.source,
+        aiSummary: {
+          context: "",
+          short_term: "",
+          long_term: "",
+          recommendation: "⚠️ Error generating insight.",
+        },
+      };
+
+      onInsightReceived(fallback);
+    }
+
+    // Optional: delay to space out requests
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+
+  console.log("🎉 All insights generated and sent.");
+}
+
+function stringSimilarity(str1, str2) {
+  const s1 = str1.toLowerCase().trim();
+  const s2 = str2.toLowerCase().trim();
+
+  const longer = s1.length > s2.length ? s1 : s2;
+  const shorter = s1.length > s2.length ? s2 : s1;
+
+  const longerLength = longer.length;
+  if (longerLength === 0) return 1.0;
+
+  const editDistance = getEditDistance(longer, shorter);
+  return (longerLength - editDistance) / longerLength;
+}
+
+function getEditDistance(a, b) {
+  const matrix = Array.from({ length: b.length + 1 }, (_, i) => [i]);
+  for (let j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b[i - 1] === a[j - 1]) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1, // substitution
+          matrix[i][j - 1] + 1,     // insertion
+          matrix[i - 1][j] + 1      // deletion
+        );
+      }
     }
   }
+
+  return matrix[b.length][a.length];
+}
+
+function removeSimilarArticles(articles, threshold = 0.8) {
+  const unique = [];
+
+  for (const current of articles) {
+    const currentKey = (current.headline + current.summary).toLowerCase().trim();
+
+    const isDuplicate = unique.some(existing => {
+      const existingKey = (existing.headline + existing.summary).toLowerCase().trim();
+      const similarity = stringSimilarity(currentKey, existingKey);
+      return similarity >= threshold;
+    });
+
+    if (!isDuplicate) {
+      unique.push(current);
+    }
+  }
+
+  return unique;
 }

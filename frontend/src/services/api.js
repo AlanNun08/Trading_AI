@@ -28,20 +28,23 @@ export async function sendToBackend(stock, news) {
 
 export async function updateInsightOnBackend(newsItem) {
   try {
-    console.log("📤 Sending updated insight to backend:", newsItem);
+    const payload = {
+      ticker: newsItem.ticker,
+      date: newsItem.date,
+      headline: newsItem.headline,
+      aiSummary: typeof newsItem.aiSummary === 'object'
+        ? formatInsightAsString(newsItem.aiSummary)
+        : newsItem.aiSummary
+    };
+
+    console.log("📤 Sending to backend:", payload);
 
     const response = await fetch("http://localhost:8080/api/data/update/summary", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        ticker: newsItem.ticker,
-        date: newsItem.date,
-        headline: newsItem.headline,
-        source: newsItem.source,
-        aiSummary: newsItem.aiSummary,
-      }),
+      body: JSON.stringify(payload),
     });
 
     const result = await response.text();
@@ -51,3 +54,8 @@ export async function updateInsightOnBackend(newsItem) {
     console.error("❌ Failed to send insight update:", err);
   }
 }
+
+function formatInsightAsString(insight) {
+  return `### Context\n${insight.context}\n\n### Short-Term Impact\n${insight.short_term}\n\n### Long-Term Outlook\n${insight.long_term}\n\n### Recommendation\n${insight.recommendation}`;
+}
+

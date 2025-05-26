@@ -18,25 +18,30 @@ Built with:
 
 * Displays daily top gainers from the stock market
 * Clicking a ticker loads news and a live price chart
+* Includes a search bar to manually look up any stock symbol
 
 ### 📊 Price Chart
 
 * Fetches **minute-by-minute price history** via Polygon
-* Subscribes to **live prices** using polling (5 per minute)
-* Displays last 30 points on a real-time Line chart
+* Toggle between **1 Day** and **30 Day** views:
+
+  * 1 Day: shows minute-by-minute with **live updates**
+  * 30 Day: shows daily closing prices with MM-DD formatting
+* Displays last 30 points in a responsive Line chart
 * Sends each price point to the backend for persistence
 
 ### 📰 News + AI Insights
 
-* Fetches the latest stock news
-* Stores news in the database with `headline`, `source`, and `summary`
-* AI generates insights using OpenAI GPT-4o-mini:
+* Fetches stock news from multiple APIs
+* Filters out duplicate news with **80% similarity check**
+* Stores news in the database with `headline`, `source`, `summary`
+* AI generates structured insights using OpenAI GPT-4o function calling:
 
   * Context
   * Short-Term Impact
-  * Long-Term Impact
-  * Recommendation
-* Each insight is **immediately shown in the UI** and sent to the backend
+  * Long-Term Outlook
+  * Actionable Advice
+* Insights are shown per article on-demand and saved to the backend
 
 ---
 
@@ -146,8 +151,7 @@ POST /api/data/update/summary
   "ticker": "AAPL",
   "date": "2025-05-15",
   "headline": "Apple beats earnings",
-  "source": "Reuters",
-  "aiSummary": "Updated analysis of Apple earnings performance..."
+  "aiSummary": "### Context\n...\n### Short-Term Impact\n...\n### Long-Term Outlook\n...\n### Recommendation\n..."
 }
 ```
 
@@ -156,7 +160,7 @@ POST /api/data/update/summary
 ## ⚠️ Rate Limits
 
 * **Polygon:** Free tier may limit requests — only fetch price history once per stock/day
-* **OpenAI GPT-4o-mini:** 3 RPM (requests per minute). App handles this with `setInterval`
+* **OpenAI GPT-4o:** 3 RPM (requests per minute). App handles this with spacing and per-article insight generation
 
 ---
 
@@ -169,6 +173,3 @@ Have an idea for improvement? Found a bug? Create an issue or contact [Alan Nune
 ## 📄 License
 
 MIT License — use, modify, and build upon this freely.
-
-```
-```

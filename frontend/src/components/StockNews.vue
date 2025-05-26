@@ -2,24 +2,38 @@
   <div class="stocks-view">
     <h2>Latest News: {{ ticker }}</h2>
 
-    <!-- 🔘 Toggle Insights Button -->
-    <button @click="toggleInsightLoop" class="insight-btn">
-      {{ looping ? '🛑 Stop Insights' : '🧠 Get Insights' }}
-    </button>
-
-    <!-- 📰 News List -->
     <div v-if="loading">Loading news...</div>
     <div v-else-if="error">{{ error }}</div>
+
     <ul v-else>
       <li v-for="(article, index) in news" :key="index">
         <strong>{{ article.headline }}</strong>
         <p class="meta">{{ formatDate(article.datetime) }} — <em>{{ article.source }}</em></p>
         <p>{{ article.summary }}</p>
 
-        <!-- 💡 AI Insight Section -->
-        <div v-if="insights[index] && insights[index].aiSummary" class="insight">
-          <h4>Advisor Insight</h4>
+        <!-- 👁️ Show/Hide Insight -->
+        <button v-if="generated[index]" @click="toggleSingleInsight(index)" class="insight-btn">
+          {{ showInsight[index] ? 'Hide Insight' : 'Show Insight' }}
+        </button>
 
+        <!-- 🔄 Generate Insight -->
+        <!-- 🔄 Generate Insight Button with Spinner -->
+        <button
+          v-if="!generated[index]"
+          @click="generateSingleInsight(index)"
+          class="insight-btn"
+          :disabled="loadingInsight[index]"
+        >
+          <span v-if="loadingInsight[index]" class="spinner-wrapper">
+            <span class="spinner"></span> Generating...
+          </span>
+          <span v-else>🔄 Generate Insight</span>
+        </button>
+
+
+        <!-- 💡 Insight Section -->
+        <div v-if="showInsight[index] && insights[index]?.aiSummary" class="insight">
+          <h4>Advisor Insight</h4>
           <template v-for="(section, sIndex) in formatInsight(insights[index].aiSummary)" :key="sIndex">
             <h5 class="section-title">{{ section.title }}</h5>
             <ul v-if="section.content.includes('- ')">
@@ -36,45 +50,47 @@
   </div>
 </template>
 
-
 <script setup>
-import { ref, onMounted, watch, onBeforeUnmount } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { getStockNews, generateNewsInsights } from '../services/stockService.js';
 
 const props = defineProps({ ticker: String });
 
 const news = ref([]);
 const insights = ref([]);
+const showInsight = ref([]);
+const generated = ref([]);
+const loadingInsight = ref([]);
+
+
 const loading = ref(true);
 const error = ref(null);
-const looping = ref(false);
-let loopInterval = null;
 
-const formatDate = (timestamp) =>
-  new Date(timestamp * 1000).toLocaleString();
-
-  function getDateRange() {
-  const now = new Date();
-  const offset = now.getTimezoneOffset() * 60000;
-  const localISO = new Date(now - offset).toISOString().split('T')[0];
-  const yesterdayISO = new Date(now - offset - 86400000).toISOString().split('T')[0];
-  return { today: localISO, yesterday: yesterdayISO };
-}
-
+const formatDate = (timestamp) => {
+  return new Date(timestamp * 1000).toLocaleString('en-US', {
+    timeZone: 'America/New_York',
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  });
+};
 
 async function fetchNews() {
   loading.value = true;
+  loadingInsight.value = Array(news.value.length).fill(false);
+
   try {
-    
-    const { today, yesterday } = getDateRange();
-    news.value = await getStockNews(props.ticker, yesterday, today);
-    insights.value = [];
+
+    // Fetch news
+    news.value = await getStockNews(props.ticker);
+
+    insights.value = Array(news.value.length).fill(null);
+    showInsight.value = Array(news.value.length).fill(false);
+    generated.value = Array(news.value.length).fill(false);
 
     if (Array.isArray(news.value) && news.value.length > 0) {
       await sendNewsToBackend(news.value, props.ticker);
     } else {
       console.warn('⚠️ No news fetched. Skipping backend send.');
-      return; // exit early
     }
   } catch (err) {
     error.value = 'Failed to fetch news.';
@@ -83,12 +99,8 @@ async function fetchNews() {
   }
 }
 
-
 async function sendNewsToBackend(newsList, ticker) {
-  if (!newsList || newsList.length === 0) return;
-
   const date = new Date().toISOString().split('T')[0];
-
   for (const article of newsList) {
     if (!article || !article.headline || !article.summary) continue;
 
@@ -121,47 +133,48 @@ async function sendNewsToBackend(newsList, ticker) {
     }
   }
 }
+
+function generateSingleInsight(index) {
+  loadingInsight.value[index] = true;
+
+  generateNewsInsights([news.value[index]], (insight) => {
+    insights.value[index] = insight;
+    generated.value[index] = true;
+    showInsight.value[index] = true;
+    loadingInsight.value[index] = false;
+  }, props.ticker);
+}
+
+
+function toggleSingleInsight(index) {
+  showInsight.value[index] = !showInsight.value[index];
+}
+
 function formatInsight(aiSummary) {
-  const lines = aiSummary.split('### ').filter(Boolean);
-  return lines.map(section => {
-    const [titleLine, ...rest] = section.split('\n');
-    return {
-      title: titleLine.trim(),
-      content: rest.join('\n').trim()
-    };
-  });
-}
-
-
-function generateInsights() {
-  if (!news.value.length) return;
-
-  insights.value = Array(news.value.length).fill(null);
-
-  generateNewsInsights(news.value, (insight) => {
-    const index = news.value.findIndex(n => n.headline === insight.headline);
-    if (index !== -1 && looping.value) {
-      insights.value[index] = insight;
-    }
-  }, props.ticker); // ✅ pass the current ticker
-}
-
-
-function toggleInsightLoop() {
-  looping.value = !looping.value;
-
-  if (looping.value) {
-    generateInsights();
-    loopInterval = setInterval(generateInsights, 10000);
-  } else {
-    clearInterval(loopInterval);
-    loopInterval = null;
+  // If it's a string (fallback), use old markdown parser
+  if (typeof aiSummary === 'string') {
+    const lines = aiSummary.split('### ').filter(Boolean);
+    return lines.map(section => {
+      const [titleLine, ...rest] = section.split('\n');
+      return {
+        title: titleLine.trim(),
+        content: rest.join('\n').trim()
+      };
+    });
   }
+
+  // If it's an object from function calling (structured)
+  return [
+    { title: 'Context', content: aiSummary.context },
+    { title: 'Short-Term Impact', content: aiSummary.short_term },
+    { title: 'Long-Term Outlook', content: aiSummary.long_term },
+    { title: 'Recommendation', content: aiSummary.recommendation }
+  ];
 }
+
 
 onMounted(fetchNews);
 watch(() => props.ticker, fetchNews);
-onBeforeUnmount(() => clearInterval(loopInterval));
 </script>
 
 <style scoped>
@@ -187,7 +200,7 @@ li {
 }
 
 .insight-btn {
-  margin: 1rem 0;
+  margin: 0.5rem 0;
   padding: 0.6rem 1.2rem;
   background: linear-gradient(135deg, #007bff, #339af0);
   border: none;
@@ -241,5 +254,25 @@ li {
   line-height: 1.5;
 }
 
+.spinner-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #fff;
+  border-top: 2px solid #007bff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 </style>

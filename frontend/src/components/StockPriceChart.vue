@@ -1,10 +1,27 @@
 <template>
   <div class="stocks-view">
     <h2>{{ ticker }} Stock Price Chart</h2>
+
+    <div class="range-toggle">
+      <button
+        :class="{ active: rangeMode === '1d' }"
+        @click="changeRange('1d')"
+      >
+        1 Day
+      </button>
+      <button
+        :class="{ active: rangeMode === '30d' }"
+        @click="changeRange('30d')"
+      >
+        30 Days
+      </button>
+    </div>
+
     <Line v-if="chartData" :data="chartData" :options="chartOptions" />
     <p v-else>Loading chart...</p>
   </div>
 </template>
+
 
 <script setup>
 import { ref, watch, onMounted, onUnmounted } from 'vue';
@@ -20,7 +37,8 @@ import {
   CategoryScale
 } from 'chart.js';
 
-import { getDailyPriceHistory, subscribeToLivePrice } from '../services/stockService.js';
+import { getDailyPriceHistory, get30DayDailyPrices, subscribeToLivePrice } from '../services/stockService.js';
+
 import { sendToBackend } from '../services/api.js';
 
 ChartJS.register(
@@ -57,27 +75,34 @@ function startRateLimitReset() {
     callCount = 0;
   }, 60000);
 }
+const rangeMode = ref('1d'); // '1d' is default
 
-function getLocalISODate(date) {
-  return date.toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
+function changeRange(mode) {
+  if (rangeMode.value !== mode) {
+    rangeMode.value = mode;
+    setupChart();
+  }
 }
 
 async function setupChart() {
   if (unsubscribe) unsubscribe();
   callCount = 0;
 
-  const today = new Date();
-  const yesterday = new Date();
-  yesterday.setDate(today.getDate() - 1);
+  let prices = [];
 
-  const startDate = getLocalISODate(yesterday); // e.g., "2025-05-14"
-  const endDate = getLocalISODate(today);       // e.g., "2025-05-15"
-
-
-  const prices = await getDailyPriceHistory(props.ticker, startDate, endDate);
+  if (rangeMode.value === '30d') {
+    prices = await get30DayDailyPrices(props.ticker);
+  } else {
+    prices = await getDailyPriceHistory(props.ticker);
+  }
 
   chartData.value = {
-    labels: prices.map(p => new Date(p.date).toLocaleTimeString()),
+    labels: prices.map(p => {
+      const dateObj = new Date(p.date);
+      return rangeMode.value === '30d'
+        ? dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) // e.g., May 25
+        : dateObj.toLocaleTimeString('en-US'); // e.g., 3:15 PM
+    }),
     datasets: [{
       label: `${props.ticker} Price`,
       data: prices.map(p => p.price),
@@ -87,10 +112,10 @@ async function setupChart() {
     }]
   };
 
-  console.log(`📊 Chart loaded with ${prices.length} points from ${startDate} to ${endDate}`);
-  startLiveCharting();
+  if (rangeMode.value === '1d') {
+    startLiveCharting();
+  }
 }
-
 
 
 function startLiveCharting() {
@@ -155,4 +180,30 @@ onUnmounted(() => {
   padding: 1rem;
   font-family: sans-serif;
 }
+.range-toggle {
+  margin-bottom: 1rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.range-toggle button {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  background-color: #ffffff;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.range-toggle button.active {
+  background-color: #0d6efd;
+  color: white;
+  border-color: #0a58ca;
+}
+
+.range-toggle button:hover {
+  background-color: #e7f1ff;
+}
+
 </style>
