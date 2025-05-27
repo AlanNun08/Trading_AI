@@ -37,7 +37,7 @@ import {
   CategoryScale
 } from 'chart.js';
 
-import { getDailyPriceHistory, get30DayDailyPrices, subscribeToLivePrice } from '../services/stockService.js';
+import { getDailyPriceHistory, get30DayDailyPrices, subscribeToLivePrice } from '../services/stockPriceService.js';
 
 import { sendToBackend } from '../services/api.js';
 
@@ -101,7 +101,8 @@ async function setupChart() {
       const dateObj = new Date(p.date);
       return rangeMode.value === '30d'
         ? dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) // e.g., May 25
-        : dateObj.toLocaleTimeString('en-US'); // e.g., 3:15 PM
+        : dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
     }),
     datasets: [{
       label: `${props.ticker} Price`,

@@ -25,7 +25,7 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
-import { getGainersWithPrices } from '../services/stockService.js';
+import { getGainersWithPrices } from '../services/stockGainerService.js';
 const emit = defineEmits(['selectTicker']);
 
 const stocks = ref([]);

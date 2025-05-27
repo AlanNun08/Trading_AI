@@ -52,7 +52,8 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue';
-import { getStockNews, generateNewsInsights } from '../services/stockService.js';
+import { getStockNews} from '../services/stockNewsService.js';
+import {generateNewsInsights} from '../services/chatGPTService.js';
 
 const props = defineProps({ ticker: String });
 
@@ -151,7 +152,7 @@ function toggleSingleInsight(index) {
 }
 
 function formatInsight(aiSummary) {
-  // If it's a string (fallback), use old markdown parser
+  // If it's a string (fallback), use old markdown-style parsing
   if (typeof aiSummary === 'string') {
     const lines = aiSummary.split('### ').filter(Boolean);
     return lines.map(section => {
@@ -163,14 +164,15 @@ function formatInsight(aiSummary) {
     });
   }
 
-  // If it's an object from function calling (structured)
+  // Structured object from OpenAI function calling (GPT-4o)
   return [
-    { title: 'Context', content: aiSummary.context },
-    { title: 'Short-Term Impact', content: aiSummary.short_term },
-    { title: 'Long-Term Outlook', content: aiSummary.long_term },
-    { title: 'Recommendation', content: aiSummary.recommendation }
+    { title: '🔍 Context & Summary', content: aiSummary.context },
+    { title: '📉 Short-Term Market Impact', content: aiSummary.short_term },
+    { title: '📈 Long-Term Business Outlook', content: aiSummary.long_term },
+    { title: '✅ Actionable Recommendation', content: aiSummary.recommendation }
   ];
 }
+
 
 
 onMounted(fetchNews);

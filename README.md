@@ -16,32 +16,75 @@ Built with:
 
 ### 🔥 Top Gainers
 
-* Displays daily top gainers from the stock market
-* Clicking a ticker loads news and a live price chart
+* Displays daily top gainers from the stock market  
+* Clicking a ticker loads news and a live price chart  
 * Includes a search bar to manually look up any stock symbol
 
 ### 📊 Price Chart
 
-* Fetches **minute-by-minute price history** via Polygon
+* Fetches **minute-by-minute price history** via Polygon  
 * Toggle between **1 Day** and **30 Day** views:
-
   * 1 Day: shows minute-by-minute with **live updates**
-  * 30 Day: shows daily closing prices with MM-DD formatting
-* Displays last 30 points in a responsive Line chart
+  * 30 Day: shows daily closing prices with MM-DD formatting  
+* Displays last 30 points in a responsive Line chart  
 * Sends each price point to the backend for persistence
 
 ### 📰 News + AI Insights
 
-* Fetches stock news from multiple APIs
-* Filters out duplicate news with **80% similarity check**
-* Stores news in the database with `headline`, `source`, `summary`
+* Fetches stock news from multiple APIs  
+* Filters out duplicate news with **80% similarity check**  
+* Stores news in the database with `headline`, `source`, `summary`  
 * AI generates structured insights using OpenAI GPT-4o function calling:
-
   * Context
   * Short-Term Impact
   * Long-Term Outlook
-  * Actionable Advice
+  * Actionable Advice  
 * Insights are shown per article on-demand and saved to the backend
+
+### 📈 Gain Window Analyzer (10–30% Gains)
+
+* Java backend calculates **intraday windows** where a stock gained between:
+  * **10–20%**
+  * **20–30%**
+  * **30–40%**
+* Data is pulled from the local SQLite database (`market_data.db`)  
+* Time is automatically converted from **Eastern Time → Pacific Standard Time (PST)**  
+* Returned as a dictionary-style JSON object with keys:
+
+```json
+{
+  "10_percent": [ { gain entry... } ],
+  "20_percent": [ { gain entry... } ],
+  "30_percent": [ { gain entry... } ]
+}
+```
+
+#### 🔍 Sample Return Structure
+
+```json
+{
+  "10_percent": [
+    {
+      "Ticker": "AAPL",
+      "Old time": "08:45:00",
+      "Old Price": "Old Price: $150.00",
+      "New time": "09:15:00",
+      "New Price": "New Price: $165.00",
+      "Percentage change": "Percentage change: 10.00%"
+    }
+  ],
+  "20_percent": [],
+  "30_percent": []
+}
+```
+
+#### 🧠 Usage
+
+Call the utility from Java:
+
+```java
+Map<String, List<Map<String, String>>> gains = GainsAnalysis.calculateGains("AAPL", "2025-05-23");
+```
 
 ---
 
@@ -68,8 +111,10 @@ Trading_AI/
 │   │   ├── service/            # Business logic
 │   │   ├── model/              # POJOs
 │   │   ├── dto/                # Request DTOs
+│   │   ├── calculations/       # Gain analysis utilities
 │   │   └── Application.java    # Spring Boot main
-│   └── market_data.db          # SQLite DB
+│   └── database/
+│       └── market_data.db      # SQLite DB
 └── frontend/
     ├── components/
     │   ├── TopGainers.vue
@@ -110,10 +155,10 @@ npm run dev
 * Runs at: `http://localhost:5173`
 * Edit API keys in `.env`:
 
-  ```
-  VITE_POLY_API_KEY=your_polygon_key
-  VITE_OPENAI_KEY=your_openai_key
-  ```
+```env
+VITE_POLY_API_KEY=your_polygon_key
+VITE_OPENAI_KEY=your_openai_key
+```
 
 ---
 
@@ -151,7 +196,14 @@ POST /api/data/update/summary
   "ticker": "AAPL",
   "date": "2025-05-15",
   "headline": "Apple beats earnings",
-  "aiSummary": "### Context\n...\n### Short-Term Impact\n...\n### Long-Term Outlook\n...\n### Recommendation\n..."
+  "aiSummary": "### Context
+...
+### Short-Term Impact
+...
+### Long-Term Outlook
+...
+### Recommendation
+..."
 }
 ```
 
@@ -159,7 +211,7 @@ POST /api/data/update/summary
 
 ## ⚠️ Rate Limits
 
-* **Polygon:** Free tier may limit requests — only fetch price history once per stock/day
+* **Polygon:** Free tier may limit requests — only fetch price history once per stock/day  
 * **OpenAI GPT-4o:** 3 RPM (requests per minute). App handles this with spacing and per-article insight generation
 
 ---

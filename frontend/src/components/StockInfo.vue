@@ -11,7 +11,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { getGainersWithPrices } from '../services/stockService.js';
+import { getGainersWithPrices } from '../services/stockPriceService.js';
 
 const stocks = ref([]);
 
