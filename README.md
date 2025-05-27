@@ -5,10 +5,10 @@ A web-based application for viewing top stock gainers, real-time price charts, a
 Built with:
 
 * ⚙️ Java Spring Boot (backend)
-* 🔤️ Vue 3 + Chart.js (frontend)
+* 🌤️ Vue 3 + Chart.js (frontend)
 * 📡 Polygon.io for stock prices
 * 🧠 OpenAI API for financial insights
-* 📃️ SQLite for storing stock & news data
+* 📜 SQLite for storing stock & news data
 
 ---
 
@@ -16,48 +16,50 @@ Built with:
 
 ### 🔥 Top Gainers
 
-* Displays daily top gainers from the stock market  
-* Clicking a ticker loads news and a live price chart  
+* Displays daily top gainers from the stock market
+* Clicking a ticker loads news and a live price chart
 * Includes a search bar to manually look up any stock symbol
 
 ### 📊 Price Chart
 
-* Fetches **minute-by-minute price history** via Polygon  
+* Fetches **minute-by-minute price history** via Polygon
 * Toggle between **1 Day** and **30 Day** views:
+
   * 1 Day: shows minute-by-minute with **live updates**
-  * 30 Day: shows daily closing prices with MM-DD formatting  
-* Displays last 30 points in a responsive Line chart  
+  * 30 Day: shows daily closing prices with MM-DD formatting
+* Displays last 30 points in a responsive Line chart
 * Sends each price point to the backend for persistence
+* Gain windows (10–30%) are color-coded directly on the chart:
+
+  * Green: 10%+
+  * Orange: 20%+
+  * Red: 30%+
+  * Purple: Above 30%
 
 ### 📰 News + AI Insights
 
-* Fetches stock news from multiple APIs  
-* Filters out duplicate news with **80% similarity check**  
-* Stores news in the database with `headline`, `source`, `summary`  
+* Fetches stock news from multiple APIs
+* Filters out duplicate news with **80% similarity check**
+* Stores news in the database with `headline`, `source`, `summary`
 * AI generates structured insights using OpenAI GPT-4o function calling:
+
   * Context
   * Short-Term Impact
   * Long-Term Outlook
-  * Actionable Advice  
+  * Actionable Advice
 * Insights are shown per article on-demand and saved to the backend
 
 ### 📈 Gain Window Analyzer (10–30% Gains)
 
 * Java backend calculates **intraday windows** where a stock gained between:
+
   * **10–20%**
   * **20–30%**
   * **30–40%**
-* Data is pulled from the local SQLite database (`market_data.db`)  
-* Time is automatically converted from **Eastern Time → Pacific Standard Time (PST)**  
-* Returned as a dictionary-style JSON object with keys:
-
-```json
-{
-  "10_percent": [ { gain entry... } ],
-  "20_percent": [ { gain entry... } ],
-  "30_percent": [ { gain entry... } ]
-}
-```
+  * **Above 40%** (tracked separately)
+* Accepts an array of price points and detects spikes
+* Time is automatically converted from **Eastern Time → Pacific Standard Time (PST)**
+* Returns JSON structure with categorized gain windows
 
 #### 🔍 Sample Return Structure
 
@@ -74,21 +76,37 @@ Built with:
     }
   ],
   "20_percent": [],
-  "30_percent": []
+  "30_percent": [],
+  "above_30_percent": []
 }
 ```
 
 #### 🧠 Usage
 
-Call the utility from Java:
+Backend endpoint:
+
+```http
+POST /api/data/analyze/gains
+```
+
+Payload:
+
+```json
+[
+  { "ticker": "AAPL", "date": "2025-05-23", "price": "150.00" },
+  { "ticker": "AAPL", "date": "2025-05-23", "price": "170.00" }
+]
+```
+
+Java API:
 
 ```java
-Map<String, List<Map<String, String>>> gains = GainsAnalysis.calculateGains("AAPL", "2025-05-23");
+Map<String, List<Map<String, String>>> gains = GainsAnalysis.calculateGains(List<StockRow> rows);
 ```
 
 ---
 
-## 🧩 Technologies
+## 🧹 Technologies
 
 | Layer    | Stack                                                                   |
 | -------- | ----------------------------------------------------------------------- |
@@ -162,7 +180,7 @@ VITE_OPENAI_KEY=your_openai_key
 
 ---
 
-## 🔪 API Endpoints
+## 🗪️ API Endpoints
 
 ### Save stock + news
 
@@ -196,22 +214,25 @@ POST /api/data/update/summary
   "ticker": "AAPL",
   "date": "2025-05-15",
   "headline": "Apple beats earnings",
-  "aiSummary": "### Context
-...
-### Short-Term Impact
-...
-### Long-Term Outlook
-...
-### Recommendation
-..."
+  "aiSummary": "### Context\n...\n### Short-Term Impact\n...\n### Long-Term Outlook\n...\n### Recommendation\n..."
 }
 ```
+
+### Analyze Gain Windows (10–40%)
+
+```http
+POST /api/data/analyze/gains
+```
+
+Payload: `List<StockPricePoint>` (Java) or JSON array of `{ ticker, date, price }`
+
+Returns categorized dictionary of gain windows.
 
 ---
 
 ## ⚠️ Rate Limits
 
-* **Polygon:** Free tier may limit requests — only fetch price history once per stock/day  
+* **Polygon:** Free tier may limit requests — only fetch price history once per stock/day
 * **OpenAI GPT-4o:** 3 RPM (requests per minute). App handles this with spacing and per-article insight generation
 
 ---
