@@ -1,11 +1,14 @@
 /Users/alannunezsilva/Documents/Trading_AI/backend/src/main/java/stock/dao/JdbcNewsDao.java
 /Users/alannunezsilva/Documents/Trading_AI/backend/src/main/java/stock/dto/SaveRequest.java
 /Users/alannunezsilva/Documents/Trading_AI/backend/src/main/java/stock/config/DatabaseConfig.java
+/Users/alannunezsilva/Documents/Trading_AI/backend/src/main/java/stock/calculations/GainsAnalysis.java
 /Users/alannunezsilva/Documents/Trading_AI/backend/src/main/java/stock/dao/JdbcStockDao.java
 /Users/alannunezsilva/Documents/Trading_AI/backend/src/main/java/stock/controller/DataController.java
 /Users/alannunezsilva/Documents/Trading_AI/backend/src/main/java/stock/service/NewsService.java
+/Users/alannunezsilva/Documents/Trading_AI/backend/src/main/java/stock/dto/StockPricePoint.java
 /Users/alannunezsilva/Documents/Trading_AI/backend/src/main/java/stock/service/StockService.java
 /Users/alannunezsilva/Documents/Trading_AI/backend/src/main/java/stock/model/News.java
+/Users/alannunezsilva/Documents/Trading_AI/backend/src/main/java/stock/dto/StockRow.java
 /Users/alannunezsilva/Documents/Trading_AI/backend/src/main/java/stock/Application.java
 /Users/alannunezsilva/Documents/Trading_AI/backend/src/main/java/stock/model/Stock.java
 /Users/alannunezsilva/Documents/Trading_AI/backend/src/main/java/stock/service/NewsServiceImpl.java

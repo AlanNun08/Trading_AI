@@ -83,6 +83,23 @@ function getMarketDay() {
   return marketDate;
 }
 
+function getLast30DaysRange() {
+  // Get EST time as a string and re-parse it as a Date
+  const estNow = new Date(
+    new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })
+  );
+
+  // Clone and subtract 30 days
+  const pastDate = new Date(estNow);
+  pastDate.setDate(estNow.getDate() - 30);
+
+  const format = (date) => date.toISOString().split('T')[0];
+
+  return {
+    startDate: format(pastDate),
+    endDate: format(estNow),
+  };
+}
 
 // Fetch full-day minute-by-minute price history for a stock from Polygon and send to backend
 export async function getDailyPriceHistory(ticker) {

@@ -8,6 +8,9 @@ stock/service/StockServiceImpl.class
 stock/Application.class
 stock/service/NewsServiceImpl.class
 stock/dto/SaveRequest.class
+stock/calculations/GainsAnalysis.class
+stock/dto/StockRow.class
+stock/dto/StockPricePoint.class
 stock/service/NewsService.class
 stock/dao/StockDao.class
 stock/dao/NewsDao.class

@@ -59,3 +59,19 @@ function formatInsightAsString(insight) {
   return `### Context\n${insight.context}\n\n### Short-Term Impact\n${insight.short_term}\n\n### Long-Term Outlook\n${insight.long_term}\n\n### Recommendation\n${insight.recommendation}`;
 }
 
+export async function sendPriceHistoryToBackend(priceArray) {
+  try {
+    const res = await fetch("http://localhost:8080/api/data/analyze/gains", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(priceArray)
+    });
+
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error("❌ Error analyzing gain windows:", err);
+    return { "10_percent": [], "20_percent": [], "30_percent": [] };
+  }
+}
+

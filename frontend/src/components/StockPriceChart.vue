@@ -39,7 +39,7 @@ import {
 
 import { getDailyPriceHistory, get30DayDailyPrices, subscribeToLivePrice } from '../services/stockPriceService.js';
 
-import { sendToBackend } from '../services/api.js';
+import { sendToBackend, sendPriceHistoryToBackend } from '../services/api.js';
 
 ChartJS.register(
   Title,
@@ -96,28 +96,73 @@ async function setupChart() {
     prices = await getDailyPriceHistory(props.ticker);
   }
 
-  chartData.value = {
-    labels: prices.map(p => {
-      const dateObj = new Date(p.date);
-      return rangeMode.value === '30d'
-        ? dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) // e.g., May 25
-        : dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  // 🎯 Create custom styling for gain markers
+  const gainPoints = prices.map(p => {
+    const time = p.date.split("T")[1]?.slice(0, 5); // "HH:mm"
+    return {
+      time,
+      price: parseFloat(p.price)
+    };
+  });
 
-    }),
-    datasets: [{
-      label: `${props.ticker} Price`,
-      data: prices.map(p => p.price),
-      fill: false,
-      borderColor: '#42A5F5',
-      tension: 0.1
-    }]
+  // 🔍 Analyze gains from backend
+  const gainWindows = await sendPriceHistoryToBackend(prices);
+
+  console.log(prices);
+  console.log('gain windows: ', gainWindows);
+
+  const labels = prices.map(p => {
+    const dateObj = new Date(p.date);
+    return rangeMode.value === '30d'
+      ? dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      : dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  });
+
+  chartData.value = {
+    labels,
+    datasets: [
+      {
+        label: `${props.ticker} Price`,
+        data: prices.map(p => parseFloat(p.price)),
+        fill: false,
+        borderColor: '#42A5F5',
+        tension: 0.1,
+        pointRadius: prices.map((point) => {
+          const priceStr = `$${parseFloat(point.price).toFixed(4)}`;
+          const match =
+            gainWindows["10_percent"].some(g => g["New Price"].includes(priceStr)) ||
+            gainWindows["20_percent"].some(g => g["New Price"].includes(priceStr)) ||
+            gainWindows["30_percent"].some(g => g["New Price"].includes(priceStr)) ||
+            gainWindows["above_30_percent"].some(g => g["New Price"].includes(priceStr));
+          return match ? 6 : 2;
+        }),
+        pointBorderWidth: 2,
+        pointBorderColor: '#000',
+        pointBackgroundColor: prices.map((point) => {
+          const priceStr = `$${parseFloat(point.price).toFixed(4)}`;
+
+          const match10 = gainWindows["10_percent"].some(g => g["New Price"].includes(priceStr));
+          const match20 = gainWindows["20_percent"].some(g => g["New Price"].includes(priceStr));
+          const match30 = gainWindows["30_percent"].some(g => g["New Price"].includes(priceStr));
+          const matchAbove = gainWindows["above_30_percent"].some(g => g["New Price"].includes(priceStr));
+
+          if (matchAbove) return "purple";
+          if (match30) return "red";
+          if (match20) return "orange";
+          if (match10) return "green";
+
+          return "rgba(66, 165, 245, 0.8)";
+        })
+      }
+    ]
   };
+
+
 
   if (rangeMode.value === '1d') {
     startLiveCharting();
   }
 }
-
 
 function startLiveCharting() {
   if (unsubscribe) unsubscribe();
@@ -156,7 +201,6 @@ function startLiveCharting() {
     console.log(`📈 Live update ${callCount}/5 for ${props.ticker}`);
   });
 }
-
 
 onMounted(() => {
   setupChart();
