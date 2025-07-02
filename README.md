@@ -58,7 +58,7 @@ Built with:
   * **30–40%**
   * **Above 40%** (tracked separately)
 * Accepts an array of price points and detects spikes
-* Time is automatically converted from **Eastern Time → Pacific Standard Time (PST)**
+* Time is submitted as **Eastern Time (AM/PM format)** and automatically converted to **Pacific Time** in the backend for analysis
 * Returns JSON structure with categorized gain windows
 
 #### 🔍 Sample Return Structure
@@ -93,8 +93,8 @@ Payload:
 
 ```json
 [
-  { "ticker": "AAPL", "date": "2025-05-23", "price": "150.00" },
-  { "ticker": "AAPL", "date": "2025-05-23", "price": "170.00" }
+  { "ticker": "AAPL", "date": "2025-05-23", "time": "9:30 AM", "price": "150.00" },
+  { "ticker": "AAPL", "date": "2025-05-23", "time": "11:15 AM", "price": "170.00" }
 ]
 ```
 
@@ -190,7 +190,7 @@ POST /api/data/save
 
 ```json
 {
-  "stock": { "ticker": "AAPL", "date": "2025-05-15T10:30:00", "price": "175.32" },
+  "stock": { "ticker": "AAPL", "date": "2025-05-15", "time": "10:30 AM", "price": "175.32" },
   "news": [
     {
       "ticker": "AAPL",
@@ -224,7 +224,7 @@ POST /api/data/update/summary
 POST /api/data/analyze/gains
 ```
 
-Payload: `List<StockPricePoint>` (Java) or JSON array of `{ ticker, date, price }`
+Payload: `List<StockPricePoint>` (Java) or JSON array of `{ ticker, date, time, price }`
 
 Returns categorized dictionary of gain windows.
 
