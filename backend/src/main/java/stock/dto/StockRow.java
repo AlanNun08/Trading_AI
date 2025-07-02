@@ -2,13 +2,15 @@ package stock.dto;
 
 public class StockRow {
     private int id;
-    private String datetime;
+    private String date;     // e.g., "2025-07-01"
+    private String time;     // e.g., "8:45 AM"
     private String ticker;
     private double price;
 
-    public StockRow(int id, String datetime, String ticker, double price) {
+    public StockRow(int id, String date, String time, String ticker, double price) {
         this.id = id;
-        this.datetime = datetime;
+        this.date = date;
+        this.time = time;
         this.ticker = ticker;
         this.price = price;
     }
@@ -17,8 +19,12 @@ public class StockRow {
         return id;
     }
 
-    public String getDatetime() {
-        return datetime;
+    public String getDate() {
+        return date;
+    }
+
+    public String getTime() {
+        return time;
     }
 
     public String getTicker() {
@@ -33,8 +39,12 @@ public class StockRow {
         this.id = id;
     }
 
-    public void setDatetime(String datetime) {
-        this.datetime = datetime;
+    public void setDate(String date) {
+        this.date = date;
+    }
+
+    public void setTime(String time) {
+        this.time = time;
     }
 
     public void setTicker(String ticker) {

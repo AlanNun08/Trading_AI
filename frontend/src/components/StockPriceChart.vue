@@ -17,6 +17,28 @@
       </button>
     </div>
 
+    <div v-if="gainWindows" class="gains-section">
+      <h3>📈 Gain Opportunities</h3>
+
+      <div v-for="(entries, label) in gainWindows" :key="label" class="gain-group">
+        <button @click="toggleGroup(label)" class="collapse-btn">
+          {{ label.replace('_', ' ').replace('percent', '% Gain') }}
+          <span>{{ expandedGroups[label] ? '▲' : '▼' }}</span>
+        </button>
+
+        <transition name="fade">
+          <ul v-show="expandedGroups[label]" class="gain-list">
+            <li v-for="(entry, index) in entries" :key="index">
+              {{ entry['Percentage change'] }} |
+              Buy: {{ entry['Old Price'] }} @ {{ entry['Old time'] }} →
+              Sell: {{ entry['New Price'] }} @ {{ entry['New time'] }}
+            </li>
+          </ul>
+        </transition>
+
+      </div>
+    </div>
+
     <Line v-if="chartData" :data="chartData" :options="chartOptions" />
     <p v-else>Loading chart...</p>
   </div>
@@ -55,6 +77,7 @@ const props = defineProps({
   ticker: { type: String, required: true }
 });
 
+const gainWindows = ref(null);
 const chartData = ref(null);
 const chartOptions = {
   responsive: true,
@@ -63,6 +86,11 @@ const chartOptions = {
     title: { display: false }
   }
 };
+const expandedGroups = ref({});
+function toggleGroup(label) {
+  expandedGroups.value[label] = !expandedGroups.value[label];
+}
+
 
 let unsubscribe = null;
 let callCount = 0;
@@ -96,17 +124,9 @@ async function setupChart() {
     prices = await getDailyPriceHistory(props.ticker);
   }
 
-  // 🎯 Create custom styling for gain markers
-  const gainPoints = prices.map(p => {
-    const time = p.date.split("T")[1]?.slice(0, 5); // "HH:mm"
-    return {
-      time,
-      price: parseFloat(p.price)
-    };
-  });
+  // Optional: still get gain windows if you want to display them somewhere else later
+  gainWindows.value = await sendPriceHistoryToBackend(prices);
 
-  // 🔍 Analyze gains from backend
-  const gainWindows = await sendPriceHistoryToBackend(prices);
 
   console.log(prices);
   console.log('gain windows: ', gainWindows);
@@ -127,42 +147,19 @@ async function setupChart() {
         fill: false,
         borderColor: '#42A5F5',
         tension: 0.1,
-        pointRadius: prices.map((point) => {
-          const priceStr = `$${parseFloat(point.price).toFixed(4)}`;
-          const match =
-            gainWindows["10_percent"].some(g => g["New Price"].includes(priceStr)) ||
-            gainWindows["20_percent"].some(g => g["New Price"].includes(priceStr)) ||
-            gainWindows["30_percent"].some(g => g["New Price"].includes(priceStr)) ||
-            gainWindows["above_30_percent"].some(g => g["New Price"].includes(priceStr));
-          return match ? 6 : 2;
-        }),
-        pointBorderWidth: 2,
-        pointBorderColor: '#000',
-        pointBackgroundColor: prices.map((point) => {
-          const priceStr = `$${parseFloat(point.price).toFixed(4)}`;
-
-          const match10 = gainWindows["10_percent"].some(g => g["New Price"].includes(priceStr));
-          const match20 = gainWindows["20_percent"].some(g => g["New Price"].includes(priceStr));
-          const match30 = gainWindows["30_percent"].some(g => g["New Price"].includes(priceStr));
-          const matchAbove = gainWindows["above_30_percent"].some(g => g["New Price"].includes(priceStr));
-
-          if (matchAbove) return "purple";
-          if (match30) return "red";
-          if (match20) return "orange";
-          if (match10) return "green";
-
-          return "rgba(66, 165, 245, 0.8)";
-        })
+        pointRadius: 2,
+        pointBorderWidth: 1,
+        pointBorderColor: '#42A5F5',
+        pointBackgroundColor: 'rgba(66, 165, 245, 0.8)'
       }
     ]
   };
-
-
 
   if (rangeMode.value === '1d') {
     startLiveCharting();
   }
 }
+
 
 function startLiveCharting() {
   if (unsubscribe) unsubscribe();
@@ -171,13 +168,10 @@ function startLiveCharting() {
     if (!chartData.value) return;
     if (callCount >= 5) return;
 
-    const time = new Date(priceData.timestamp).toLocaleTimeString();
-
-    // Copy existing chart data to preserve reactivity
-    const labels = [...chartData.value.labels, time];
+    // Use already-formatted time from priceData
+    const labels = [...chartData.value.labels, priceData.time];
     const data = [...chartData.value.datasets[0].data, priceData.price];
 
-    // Trim to 30 points
     if (labels.length > 30) {
       labels.shift();
       data.shift();
@@ -193,7 +187,7 @@ function startLiveCharting() {
 
     await sendToBackend({
       ticker: priceData.symbol,
-      date: priceData.timestamp,
+      date: `${priceData.date} ${priceData.time}`, // ← combine directly
       price: priceData.price
     }, []);
 
@@ -201,6 +195,8 @@ function startLiveCharting() {
     console.log(`📈 Live update ${callCount}/5 for ${props.ticker}`);
   });
 }
+
+
 
 onMounted(() => {
   setupChart();
@@ -250,5 +246,71 @@ onUnmounted(() => {
 .range-toggle button:hover {
   background-color: #e7f1ff;
 }
+
+.gains-section {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 0.85rem;
+}
+
+.collapse-btn {
+  width: 100%;
+  text-align: left;
+  background: #e9ecef;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 0.25rem;
+  font-weight: bold;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.gain-list li {
+  margin-bottom: 0.4rem;
+  line-height: 1.4;
+  padding: 0.3rem 0.4rem;
+  border-left: 3px solid #0d6efd;
+  background-color: #ffffff;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #333;
+}
+
+.gain-list li::before {
+  content: '📊 ';
+  margin-right: 0.3rem;
+}
+
+.gains-section h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.8rem;
+  color: #0d6efd;
+}
+
+.gain-group h4 {
+  margin: 0.5rem 0 0.3rem;
+  font-size: 0.95rem;
+  color: #495057;
+  font-weight: 600;
+}
+
+
+/* Optional: Smooth show/hide transition */
+.fade-enter-active, .fade-leave-active {
+  transition: all 0.3s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+  transform: translateY(-5px);
+}
+
 
 </style>

@@ -42,10 +42,8 @@ public class DataController {
         List<News> newsList = request.getNews();
 
         if (stock != null) {
-            String dateOnly = stock.getDate().split("T")[0];
-
             // 🧹 Clear existing prices for that ticker + date
-            stockService.deleteStockPricesByDate(stock.getTicker(), dateOnly);
+            stockService.deleteStockPricesByDate(stock.getTicker(), stock.getDate());
 
             // 💾 Save the incoming stock price
             stockService.saveStock(stock);
@@ -82,9 +80,9 @@ public class DataController {
             .map(p -> {
                 try {
                     double parsedPrice = Double.parseDouble(p.getPrice());
-                    return new StockRow(0, p.getDate(), p.getTicker(), parsedPrice);
+                    return new StockRow(0, p.getDate(), p.getTime(), p.getTicker(), parsedPrice);
                 } catch (NumberFormatException e) {
-                    return null; // This row will be skipped
+                    return null; // Skip malformed row
                 }
             })
             .filter(Objects::nonNull)
