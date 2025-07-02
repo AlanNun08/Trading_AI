@@ -1,3 +1,4 @@
+````markdown
 # 📈 Trading AI
 
 A web-based application for viewing top stock gainers, real-time price charts, and AI-generated insights on financial news.
@@ -24,25 +25,23 @@ Built with:
 
 * Fetches **minute-by-minute price history** via Polygon
 * Toggle between **1 Day** and **30 Day** views:
-
   * 1 Day: shows minute-by-minute with **live updates**
   * 30 Day: shows daily closing prices with MM-DD formatting
 * Displays last 30 points in a responsive Line chart
 * Sends each price point to the backend for persistence
-* Gain windows (10–30%) are color-coded directly on the chart:
-
-  * Green: 10%+
-  * Orange: 20%+
-  * Red: 30%+
-  * Purple: Above 30%
 
 ### 📰 News + AI Insights
 
-* Fetches stock news from multiple APIs
+* Fetches stock news from **multiple APIs**:
+  - Polygon.io
+  - MarketAux
+  - NewsData.io
+  - GNews
+  - Finnhub
+  - Alpaca
 * Filters out duplicate news with **80% similarity check**
 * Stores news in the database with `headline`, `source`, `summary`
 * AI generates structured insights using OpenAI GPT-4o function calling:
-
   * Context
   * Short-Term Impact
   * Long-Term Outlook
@@ -52,7 +51,6 @@ Built with:
 ### 📈 Gain Window Analyzer (10–30% Gains)
 
 * Java backend calculates **intraday windows** where a stock gained between:
-
   * **10–20%**
   * **20–30%**
   * **30–40%**
@@ -68,9 +66,9 @@ Built with:
   "10_percent": [
     {
       "Ticker": "AAPL",
-      "Old time": "08:45:00",
+      "Old time": "08:45",
       "Old Price": "Old Price: $150.00",
-      "New time": "09:15:00",
+      "New time": "09:15",
       "New Price": "New Price: $165.00",
       "Percentage change": "Percentage change: 10.00%"
     }
@@ -79,7 +77,7 @@ Built with:
   "30_percent": [],
   "above_30_percent": []
 }
-```
+````
 
 #### 🧠 Usage
 
@@ -108,13 +106,13 @@ Map<String, List<Map<String, String>>> gains = GainsAnalysis.calculateGains(List
 
 ## 🧹 Technologies
 
-| Layer    | Stack                                                                   |
-| -------- | ----------------------------------------------------------------------- |
-| Frontend | Vue 3, Chart.js, Vite                                                   |
-| Backend  | Java Spring Boot, JdbcTemplate                                          |
-| Database | SQLite (`market_data.db`)                                               |
-| APIs     | [Polygon.io](https://polygon.io), [OpenAI](https://platform.openai.com) |
-| Hosting  | Localhost                                                               |
+| Layer    | Stack                                                                                                                   |
+| -------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Frontend | Vue 3, Chart.js, Vite                                                                                                   |
+| Backend  | Java Spring Boot, JdbcTemplate                                                                                          |
+| Database | SQLite (`market_data.db`)                                                                                               |
+| APIs     | [Polygon.io](https://polygon.io), [OpenAI](https://platform.openai.com), NewsData.io, MarketAux, Finnhub, GNews, Alpaca |
+| Hosting  | Localhost                                                                                                               |
 
 ---
 
@@ -176,6 +174,12 @@ npm run dev
 ```env
 VITE_POLY_API_KEY=your_polygon_key
 VITE_OPENAI_KEY=your_openai_key
+VITE_NEWSDATA_API_KEY=your_newsdata_key
+VITE_MARKETAUX_API_KEY=your_marketaux_key
+VITE_FINNHUB_API_KEY=your_finnhub_key
+VITE_ALPACA_API_KEY=your_alpaca_key
+VITE_ALPACA_SECRET_KEY=your_alpaca_secret
+VITE_GNEWS_API_KEY=your_gnews_key
 ```
 
 ---
